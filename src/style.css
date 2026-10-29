@@ -6,3 +6,5 @@
 
 /* Hover labels must never intercept the regenerate button on small thumbnails. */
 .item-label{pointer-events:none}
+
+.project-heading{display:flex;align-items:center;justify-content:space-between}.project-heading .icon-btn{padding:3px}.project-heading .lucide{width:13px;height:13px}#projects-status{display:block;margin-top:7px;font-size:9px;color:#8d989f;line-height:1.5}

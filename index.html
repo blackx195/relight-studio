@@ -49,7 +49,7 @@
       <button id="reset-layout" class="text-btn muted"><i data-lucide="rotate-ccw"></i>重設排版</button>
       <hr><div class="section-label">產圖設定 <span>OUTPUT</span></div>
       <div class="two-fields"><label>單圖解析度<select id="resolution"><option value="2k">2K</option><option value="1k">1K</option></select></label><label>同時處理<select id="concurrency"><option value="1">1 張</option><option value="2" selected>2 張</option><option value="3">3 張</option></select></label></div>
-      <label class="folder-field">Magnific 專案<select id="folder"><option value="">Personal（預設）</option></select></label>
+      <div class="folder-field"><div class="project-heading"><label for="folder">Magnific 專案</label><button id="refresh-projects" class="icon-btn" title="重新整理專案" aria-label="重新整理專案"><i data-lucide="refresh-cw"></i></button></div><select id="folder" aria-describedby="projects-status"><option value="">Personal（預設）</option></select><small id="projects-status" role="status">連接帳號後自動載入專案</small></div>
       <div class="auto-cutout"><i data-lucide="scissors"></i><span>每張產圖後自動去背</span><i data-lucide="check"></i></div>
       <button id="generate" class="primary generate"><i data-lucide="sparkles"></i><span>批量打光並去背</span></button>
       <button id="stop" class="secondary" hidden>完成目前項目後停止</button>

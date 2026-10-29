@@ -111,6 +111,21 @@ export class MagnificClient {
     await this.initialize();
     return unwrapMcp(await this.rpc('tools/call', { name: this.resolveTool(name), arguments: args }));
   }
+  async listProjects() {
+    const projects = new Map();
+    for (let page = 1; page <= 100; page++) {
+      const result = await this.call('folders_list', { onlyProjects: true, orderBy: 'name', page });
+      const items = Array.isArray(result) ? result : result.items || result.projects || result.folders || result.data;
+      if (!Array.isArray(items)) throw new Error('Magnific 專案清單格式無法辨識。');
+      const before = projects.size;
+      for (const item of items) {
+        const reference = item.reference || item.folderReference;
+        if (reference) projects.set(reference, { ...item, reference });
+      }
+      if (!items.length || projects.size === before) return [...projects.values()];
+    }
+    throw new Error('專案清單分頁過多，請稍後重新整理。');
+  }
   async upload(file, folderReference) {
     const upload = await this.call('creations_request_upload', { mimeType: file.type });
     const item = upload.uploads?.[0] || upload;

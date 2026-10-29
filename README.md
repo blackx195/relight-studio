@@ -9,6 +9,7 @@
 - Three.js 3D 光向參考、拖曳調整、六個快捷方向；1–4 盞燈，各自設定 Rotate、Elevation、Intensity 與顏色。
 - 批量上傳 PNG / JPG / WebP，最多 100 張、單張 25 MB、原圖合計 200 MB。
 - Magnific MCP 管線：上傳原圖 → `images_relight` → `images_remove_background` → 下載透明圖。
+- 登入後自動載入帳號的 Magnific 專案，支援 TOON 清單、完整分頁與手動重新整理；選取的專案會套用到後續批次的上傳、打光及去背。
 - 整批固定使用啟動時的設定，併發 1–3 張。單圖 ↻ 從原圖重產，沿用該圖的上次設定。再次按批量產圖則把目前設定套用到所有圖片。
 - 儲存各步驟的工作 ID；中斷後可接續輪詢，不自動重送不確定是否已扣點的請求。
 - 上傳共用底圖後自動符合尺寸與比例；列數、欄數、水平／垂直間距、X/Y 位移、留白、縮放、隨機排列。
@@ -18,7 +19,7 @@
 
 ## 目前驗證與登入狀態
 
-本機的 16 項自動測試與正式建置通過。示範素材為本機 Three.js 渲染，**不是 Magnific 產圖**。
+本機的 19 項自動測試與正式建置通過。示範素材為本機 Three.js 渲染，**不是 Magnific 產圖**。
 
 已建立公開 OAuth 用戶端，正式網站登入、MCP 工具連線與額度查詢通過實測。登入採 authorization code + PKCE S256，並檢查 state、issuer、有效期限；只有公開 client ID 放入 `public/oauth-config.json`，沒有 API Key、client secret 或帳號 token。
 

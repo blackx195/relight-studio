@@ -12,7 +12,7 @@ const icons = () => createIcons({ icons: iconSet });
 const $ = id => document.getElementById(id);
 const client = new MagnificClient();
 const state = { lights: structuredClone(DEFAULT_LIGHTS), layout: { ...DEFAULT_LAYOUT }, selectedLight: 0, items: [], background: null, resolution: '2k', concurrency: 2, folder: '', guides: true };
-let scene, busy = false, stopRequested = false, saveTimer, toastTimer, saveWarningShown = false, frame;
+let scene, busy = false, stopRequested = false, saveTimer, toastTimer, saveWarningShown = false, frame, projectsLoading = false;
 const statuses = { ready: '等待打光', demo: '示範素材', done: '已打光・已去背', failed: '處理失敗', interrupted: '可繼續處理', queued: '排隊中', processing: '處理中' };
 function toast(message, error = false) { const box = $('toast'); box.textContent = message; box.classList.toggle('error', error); box.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { box.hidden = true; }, error ? 12000 : 5000); }
 function on(id, event, action) { $(id).addEventListener(event, async e => { try { await action(e); } catch (error) { toast(error.message || String(error), true); } }); }
@@ -180,7 +180,7 @@ async function restore(data) {
 
 async function connect() {
   if (busy) throw new Error('請等待目前批次完成。');
-  if (client.connected) { client.logout(); $('connection-label').textContent = '連接 Magnific'; $('connect').querySelector('.status-dot').classList.add('offline'); $('credits-note').textContent = '產圖使用你的 Magnific 額度'; toast('已中斷此分頁的 Magnific 連線'); return; }
+  if (client.connected) { client.logout(); $('connection-label').textContent = '連接 Magnific'; $('connect').querySelector('.status-dot').classList.add('offline'); $('credits-note').textContent = '產圖使用 Magnific credits · 官網 Unlimited 不適用'; $('folder').replaceChildren(new Option('Personal（預設）', '')); $('projects-status').textContent = '連接帳號後自動載入專案'; state.folder = ''; scheduleSave(); toast('已中斷此分頁的 Magnific 連線'); return; }
   await persist(); await client.login();
 }
 async function refreshAccount() {
@@ -190,19 +190,37 @@ async function refreshAccount() {
   $('connect').querySelector('.status-dot').classList.remove('offline');
   $('connect').title = '點擊中斷連線';
   $('credits-note').textContent = '可用 ' + (balance.credits?.available ?? '—') + ' credits · 此網站產圖會扣點，官網 Unlimited 不適用';
+  await refreshProjects();
+}
+
+async function refreshProjects() {
+  if (projectsLoading) return;
+  if (!client.connected) { $('projects-status').textContent = '請先連接 Magnific 帳號'; return; }
+  projectsLoading = true; $('refresh-projects').disabled = true; $('projects-status').textContent = '正在讀取帳號專案…';
   try {
-    const result = await client.call('folders_list', { onlyProjects: true });
-    const folders = Array.isArray(result) ? result : result.projects || result.folders || result.data || result.items || [];
-    const select = $('folder'); select.replaceChildren(new Option('Personal（預設）', ''));
-    if (Array.isArray(folders)) for (const folder of folders) { const ref = folder.reference || folder.folderReference; if (ref && !folder.disabled) select.add(new Option(folder.name || ref, ref)); }
-    if (state.folder && ![...select.options].some(o => o.value === state.folder)) select.add(new Option('已儲存專案 ' + state.folder.slice(0, 8), state.folder));
-    select.value = state.folder;
-  } catch { /* Account may restrict project listing. Explicit saved refs persist. */ }
+    const projects = await client.listProjects();
+    if (!client.connected) return;
+    const select = $('folder'), defaultProject = projects.find(project => project.type === 'project_default');
+    const options = projects.map(project => {
+      const option = new Option((project.name || project.reference) + (project.type === 'project_default' ? '（預設）' : '') + (project.disabled ? '（無法使用）' : ''), project.reference);
+      option.disabled = !!project.disabled; return option;
+    });
+    if (!defaultProject) options.unshift(new Option('Personal（預設）', ''));
+    if (state.folder && !options.some(option => option.value === state.folder)) {
+      const missing = new Option('已儲存專案（目前無法存取）', state.folder); missing.disabled = true; options.push(missing);
+    }
+    select.replaceChildren(...options); select.value = state.folder || defaultProject?.reference || '';
+    $('projects-status').textContent = `已載入 ${projects.length} 個專案`;
+  } catch (error) {
+    $('projects-status').textContent = '專案讀取失敗，請重新整理';
+    toast('Magnific 專案：' + error.message, true);
+  } finally { projectsLoading = false; $('refresh-projects').disabled = false; }
 }
 
 async function executeBatch(items, recipe) {
   if (busy) return;
   if (!client.connected) { toast('先點右上角「連接 Magnific」，登入後即可產圖。', true); return; }
+  if ([...$('folder').selectedOptions].some(option => option.disabled)) throw new Error('請先選擇目前帳號可使用的 Magnific 專案。');
   if (!items.length) { toast('沒有待處理的圖片。'); return; }
   if (items.some(i => i.uncertain)) throw new Error('有工作在送出後中斷，是否已扣點尚不確定。請先到 Magnific 歷史確認；要明確重產可使用圖片上的 ↻。');
   busy = true; stopRequested = false;
@@ -342,6 +360,7 @@ on('reset-layout', 'click', () => { const { width, height, backgroundColor, tran
 on('resolution', 'change', e => { state.resolution = e.target.value; scheduleSave(); });
 on('concurrency', 'change', e => { state.concurrency = Number(e.target.value); scheduleSave(); });
 on('folder', 'change', e => { state.folder = e.target.value; scheduleSave(); });
+on('refresh-projects', 'click', refreshProjects);
 on('generate', 'click', () => {
   if (!client.connected) { toast('先點右上角「連接 Magnific」，登入後即可產圖。', true); return; }
   const recipe = snapshotRecipe(state.lights, state.resolution, state.folder);

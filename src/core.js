@@ -1,3 +1,5 @@
+import { decode } from '@toon-format/toon';
+
 export const clamp = (n, min, max) => Math.min(max, Math.max(min, Number(n) || 0));
 export const DEFAULT_LIGHTS = [{ id: 'key', azimuth: 45, elevation: 35, intensity: 5, color: '#fff1d6', type: 'gel' }];
 export const DEFAULT_LAYOUT = { width: 1920, height: 1080, rows: 2, columns: 3, gapX: 40, gapY: 40, padding: 64, offsetX: 0, offsetY: 0, scale: 90, backgroundColor: '#d8d6cf', transparent: false };
@@ -44,7 +46,11 @@ export function unwrapMcp(result) {
   if (result.isError) throw new Error(result.content?.filter(x => x.type === 'text').map(x => x.text).join('\n') || 'Magnific 呼叫失敗');
   if (result.structuredContent) return result.structuredContent;
   const text = result.content?.filter(x => x.type === 'text').map(x => x.text).join('\n');
-  if (text) { try { return JSON.parse(text); } catch { throw new Error(text.slice(0, 600)); } }
+  if (text) {
+    try { return JSON.parse(text); } catch { /* Some Magnific lists are TOON. */ }
+    try { const decoded = decode(text); if (decoded && typeof decoded === 'object') return decoded; } catch { /* Report unrecognized provider text below. */ }
+    throw new Error(text.slice(0, 600));
+  }
   throw new Error('Magnific 未傳回可讀取的結果。');
 }
 export function creationId(data) {

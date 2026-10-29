@@ -3,7 +3,19 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "scripts": {"dev": "vite --host 127.0.0.1", "build": "vite build", "preview": "vite preview --host 127.0.0.1", "test": "node --test test/*.test.js"},
-  "dependencies": {"three": "0.180.0", "lucide": "0.468.0", "fflate": "0.8.2"},
-  "devDependencies": {"vite": "7.1.12"}
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@toon-format/toon": "4.4.0",
+    "fflate": "0.8.2",
+    "lucide": "0.468.0",
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "vite": "7.1.12"
+  }
 }

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { gridLayout, DEFAULT_LAYOUT, lightPosition, normalizedLights, shuffle, snapshotRecipe, unwrapMcp, creationId } from '../src/core.js';
-import { parseRpcText } from '../src/magnific.js';
+import { parseRpcText, MagnificClient } from '../src/magnific.js';
 import { processItem, runPool } from '../src/pipeline.js';
 
 const items = Array.from({ length: 7 }, (_, i) => ({ id: i, width: 200 + i * 50, height: 400 - i * 20 }));
@@ -20,6 +20,32 @@ test('batch recipe does not change when controls change', () => { const lights =
 test('shuffle is a permutation without mutating input', () => { const result = shuffle(items, () => 0); assert.notDeepEqual(result, items); assert.equal(items[0].id, 0); assert.deepEqual(result.map(x => x.id).sort(), items.map(x => x.id).sort()); });
 test('structured and text MCP results and errors are handled', () => { assert.deepEqual(unwrapMcp({ structuredContent: { ok: 1 } }), { ok: 1 }); assert.deepEqual(unwrapMcp({ content: [{ type: 'text', text: '{"ok":2}' }] }), { ok: 2 }); assert.throws(() => unwrapMcp({ isError: true, content: [{ type: 'text', text: 'out of credits' }] }), /out of credits/); assert.equal(creationId({ creations: [{ identifier: 'abc' }] }), 'abc'); });
 test('SSE parser picks the matching response and accepts CRLF', () => { const stream = 'event: message\r\ndata: {"jsonrpc":"2.0","method":"ping"}\r\n\r\nevent: message\r\ndata: {"jsonrpc":"2.0","id":42,"result":{"ok":true}}\r\n\r\n'; assert.equal(parseRpcText(stream, 42).result.ok, true); });
+test('Magnific TOON project lists preserve names, references and nested parents', () => {
+  const text = 'items[2]:\n  - reference: personal-ref\n    name: Personal\n    type: project_default\n    parent:\n      id: workspace-ref\n      name: My workspace\n  - reference: studio-ref\n    name: "素材, A: 打光"\n    type: project\n    disabled: false\ninstruction: "Use the returned references."';
+  const result = unwrapMcp({ content: [{type:'text',text}] });
+  assert.equal(result.items.length, 2);
+  assert.equal(result.items[0].reference, 'personal-ref');
+  assert.equal(result.items[0].parent.name, 'My workspace');
+  assert.equal(result.items[1].name, '素材, A: 打光');
+  assert.deepEqual(unwrapMcp({content:[{type:'text',text:'items[0]:'}]}), {items:[]});
+  assert.throws(() => unwrapMcp({content:[{type:'text',text:'not a data response'}]}), /not a data response/);
+});
+test('project listing reads every page and stops on an empty page', async () => {
+  const client = new MagnificClient(), pages = [];
+  client.call = async (tool, args) => {
+    assert.equal(tool, 'folders_list'); assert.equal(args.onlyProjects, true); pages.push(args.page);
+    return {items: args.page < 3 ? [{reference:'project-'+args.page,name:'專案 '+args.page}] : []};
+  };
+  assert.deepEqual((await client.listProjects()).map(p=>p.reference), ['project-1','project-2']);
+  assert.deepEqual(pages,[1,2,3]);
+});
+test('project listing stops repeated pages and reports malformed responses', async () => {
+  const client = new MagnificClient(); let calls=0;
+  client.call = async () => { calls++; return {items:[{reference:'same',name:'專案'}]}; };
+  assert.equal((await client.listProjects()).length,1); assert.equal(calls,2);
+  client.call = async () => ({unexpected:true});
+  await assert.rejects(()=>client.listProjects(), /格式無法辨識/);
+});
 test('pipeline uploads original then relights then removes background, with fixed recipe', async () => {
   const calls = [], checkpoints = [], item = { original: new Blob(['original']), recipe: null };
   const recipe = { lights: [{ azimuth: -15.6, elevation: 32.5, intensity: 5, type: 'neutral' }], resolution: '2k', folderReference: 'folder' };
