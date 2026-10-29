@@ -3,3 +3,6 @@
 @media(min-width:951px){.workspace{height:calc(100dvh - 130px);min-height:550px}.panel{overflow-y:auto;scrollbar-width:thin;scrollbar-color:#40473e transparent}.center-panel{min-height:0}.canvas-area{min-height:240px;overflow:hidden}.assets-panel{flex-shrink:0;min-height:180px;padding-top:17px;padding-bottom:13px}.asset-list{min-height:95px}.assets-heading{margin-bottom:13px}.bottom-bar{height:58px}.canvas-toolbar{flex-shrink:0}.lighting-panel .scene-wrap{height:220px}.panel{scrollbar-gutter:stable}}
 
 .background-upload-button{width:100%;margin:7px 0 3px;padding:8px 10px;color:#b9c4ad;font-size:10px;border-style:dashed;background:#252c25}
+
+/* Hover labels must never intercept the regenerate button on small thumbnails. */
+.item-label{pointer-events:none}

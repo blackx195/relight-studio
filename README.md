@@ -18,13 +18,17 @@
 
 ## 目前驗證與登入狀態
 
-本機的 15 項自動測試與正式建置通過。示範素材為本機 Three.js 渲染，**不是 Magnific 產圖**。
+本機的 16 項自動測試與正式建置通過。示範素材為本機 Three.js 渲染，**不是 Magnific 產圖**。
 
-**Magnific OAuth 尚未完成實際連通與付費產圖驗證。** 網站以「Magnific 待設定」明確顯示。首次瀏覽器 OAuth 嘗試在 callback 後收到 HTTP 403，正式網站的公開 OAuth 用戶端尚待擁有者授權設定。未將任何 API Key、client secret 或帳號 token 放入程式碼。
+已建立公開 OAuth 用戶端，正式網站登入、MCP 工具連線與額度查詢通過實測。登入採 authorization code + PKCE S256，並檢查 state、issuer、有效期限；只有公開 client ID 放入 `public/oauth-config.json`，沒有 API Key、client secret 或帳號 token。
 
-待擁有者授權後，註冊 `token_endpoint_auth_method: none` 的公開 OAuth 用戶端，限定本網站的回呼網址，把回傳的**公開 client_id** 填入 `public/oauth-config.json`，並確認 token endpoint 的 CORS 允許網站 origin。不能把 confidential client 的 secret 放到此靜態網站。登入採 authorization code + PKCE S256，並檢查 state、issuer、有效期限。
+Magnific 的圖片上傳端點未提供 GitHub origin 的 CORS，因此圖片經專用傳輸中介送往 Magnific。中介只接受指定網站 origin 與 Magnific 簽發的短效網址，限制目的地、路徑、有效時間、檔案格式及 25 MB 上限；不接收 OAuth 憑證，不記錄或持久保存圖片，不跟隨轉址。其 6 項測試通過。
 
-若供應商不允許瀏覽器直接 OAuth/MCP，需加上獨立後端中介；GitHub Pages 本身不執行伺服器程式。不可將「聊天中的 Magnific 連接」視為網站的登入憑證。
+傳輸中介：https://relight-studio-transfer-blackx195.blackx1955.chatgpt.site
+
+2026-10-29 已在正式網站實測一張素材：上傳 → Relight → 自動去背 → 下載 ZIP 全部成功，下載結果為 2048 × 2048 RGBA PNG，已確認具備透明像素。該次測試消耗 78 credits；這是實測差額，不代表所有設定或未來價格。多圖併發、失敗隔離與工作接續另有自動測試；六張示範素材的排版、底圖比例與專案匯入匯出已實跑。
+
+3D 拖曳與輸入的角度送出時採整數，以符合 Magnific 參數要求。單圖重產保留上次打光設定；舊專案中的小數角度會在送出時取整數。
 
 ## 開發
 
@@ -45,13 +49,13 @@ npm run dev
 ## 使用
 
 1. 先試用示範素材，或上傳多張原圖。
-2. 用 3D 預覽或數字設定打光，完成網站登入設定後連接 Magnific。
+2. 用 3D 預覽或數字設定打光，連接並授權自己的 Magnific 帳號。
 3. 按「批量打光並去背」。每張產圖與去背會依 Magnific 的規則使用帳號額度。
 4. 上傳底圖、設定格數與間距，必要時按隨機排列。X/Y 位移可能讓素材超出畫布並被裁切。
 5. 滑鼠移到圖片上按 ↻ 可單張重產，不變動其他圖片；行動裝置直接顯示此按鈕。
 6. 匯出合成 PNG 或透明圖 ZIP。尚未完成的圖片在預覽與合成匯出中會使用原圖，並顯示提醒。
 
-圖片留在本機，只有開始產圖時才上傳 Magnific；自訂底圖不傳給 Magnific。原圖會出現在 Magnific 個人或所選專案的作品庫。清理瀏覽器資料可能刪除本機專案，請保留下載備份。
+圖片先留在本機，只有開始產圖時才經傳輸中介上傳 Magnific；自訂底圖不傳給 Magnific。原圖會出現在 Magnific 個人或所選專案的作品庫。清理瀏覽器資料可能刪除本機專案，請保留下載備份。
 
 ## 官方參考
 
