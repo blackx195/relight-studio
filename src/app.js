@@ -189,7 +189,7 @@ async function refreshAccount() {
   $('connection-label').textContent = `已連接 · ${balance.credits?.available ?? '—'} credits`;
   $('connect').querySelector('.status-dot').classList.remove('offline');
   $('connect').title = '點擊中斷連線';
-  $('credits-note').textContent = '可用額度 ' + (balance.credits?.available ?? '—') + ' credits · Relight 與去背依官方計費';
+  $('credits-note').textContent = '可用 ' + (balance.credits?.available ?? '—') + ' credits · 此網站產圖會扣點，官網 Unlimited 不適用';
   try {
     const result = await client.call('folders_list', { onlyProjects: true });
     const folders = Array.isArray(result) ? result : result.projects || result.folders || result.data || result.items || [];
@@ -213,7 +213,7 @@ async function executeBatch(items, recipe) {
   try {
     await client.initialize();
     const balance = await client.call('account_balance');
-    if (!(balance.credits?.available > 0) && !balance.plan?.isUnlimitedMode) throw new Error('Magnific 帳號額度不足。');
+    if (!(balance.credits?.available > 0)) throw new Error('Magnific credits 額度不足。官網 Unlimited 不適用於此網站的 MCP 產圖。');
     await persist();
     await runPool(items, state.concurrency, async item => {
       item.status = 'processing'; item.error = null;

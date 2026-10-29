@@ -26,6 +26,10 @@ Magnific 的圖片上傳端點未提供 GitHub origin 的 CORS，因此圖片經
 
 傳輸中介：https://relight-studio-transfer-blackx195.blackx1955.chatgpt.site
 
+**官網的 ∞ Unlimited 不適用於此網站。** Magnific 官方規定 API 與 MCP 產圖會消耗 credits，沒有可讓此整合切換為 Unlimited 的參數。若要使用官網 Unlimited，可先在官方網頁完成打光與去背，再把透明結果上傳此站做本機排版及匯出。
+
+計費來源：[Magnific MCP](https://www.magnific.com/ai/docs/magnific-mcp)、[Magnific API](https://www.magnific.com/ai/docs/magnific-api)。
+
 2026-10-29 已在正式網站實測一張素材：上傳 → Relight → 自動去背 → 下載 ZIP 全部成功，下載結果為 2048 × 2048 RGBA PNG，已確認具備透明像素。該次測試消耗 78 credits；這是實測差額，不代表所有設定或未來價格。多圖併發、失敗隔離與工作接續另有自動測試；六張示範素材的排版、底圖比例與專案匯入匯出已實跑。
 
 3D 拖曳與輸入的角度送出時採整數，以符合 Magnific 參數要求。單圖重產保留上次打光設定；舊專案中的小數角度會在送出時取整數。
