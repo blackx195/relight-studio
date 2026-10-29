@@ -108,29 +108,17 @@ export class LightScene {
 }
 
 export async function createDemoAssets() {
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
-  renderer.setSize(480, 480); renderer.setClearColor(0x000000, 0); renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.5;
-  const colors = [0xb5c98a, 0xe6a56c, 0xbac7d7, 0xd3b7bb, 0xe5d8ad, 0x819e91];
-  const names = ['Knot', 'Vase', 'Orb', 'Loop', 'Totem', 'Pebble'];
-  const files = [];
-  for (let i = 0; i < 6; i++) {
-    const scene = new THREE.Scene(); const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100); camera.position.set(3, 2, 5); camera.lookAt(0, 0, 0);
-    scene.add(new THREE.AmbientLight(0xffffff, 1.8));
-    const key = new THREE.DirectionalLight(0xfff0d8, 4); key.position.set(-3, 5, 4); scene.add(key);
-    const fill = new THREE.DirectionalLight(0xe0ebff, 2); fill.position.set(3, 1, -2); scene.add(fill);
-    const material = new THREE.MeshPhysicalMaterial({ color: colors[i], roughness: 0.31, metalness: 0.13, clearcoat: 0.5 });
-    let geometry;
-    if (i === 0) geometry = new THREE.TorusKnotGeometry(0.7, 0.25, 160, 32);
-    if (i === 1) geometry = new THREE.LatheGeometry([new THREE.Vector2(0.01, -1), new THREE.Vector2(0.65, -0.95), new THREE.Vector2(0.77, -0.3), new THREE.Vector2(0.6, 0.3), new THREE.Vector2(0.29, 0.62), new THREE.Vector2(0.27, 1), new THREE.Vector2(0.35, 1.06), new THREE.Vector2(0.23, 1.06), new THREE.Vector2(0.2, 0.9)], 64);
-    if (i === 2) geometry = new THREE.IcosahedronGeometry(1.03, 1);
-    if (i === 3) geometry = new THREE.TorusGeometry(0.77, 0.32, 48, 96);
-    if (i === 4) geometry = new THREE.LatheGeometry(Array.from({ length: 80 }, (_, j) => { const y = j / 79 * 2.2 - 1.1; return new THREE.Vector2(0.4 + Math.pow(Math.cos(y * 4), 2) * 0.28, y); }), 64);
-    if (i === 5) geometry = new THREE.SphereGeometry(1, 64, 48);
-    const mesh = new THREE.Mesh(geometry, material); mesh.rotation.set(0.1, 0.35, i === 3 ? -0.3 : 0); if (i === 5) mesh.scale.set(1, 0.55, 0.7); scene.add(mesh);
-    renderer.render(scene, camera);
-    const blob = await new Promise(resolve => renderer.domElement.toBlob(resolve, 'image/png'));
-    files.push(new File([blob], `${String(i + 1).padStart(2, '0')}-${names[i]}.png`, { type: 'image/png' }));
-    geometry.dispose(); material.dispose();
-  }
-  renderer.dispose(); return files;
+  const assets = [
+    ['01-j.png', '01-J.png'],
+    ['02-salmon.png', '02-鮭魚.png'],
+    ['03-q.png', '03-Q.png'],
+    ['04-onigiri.png', '04-飯糰.png'],
+    ['05-taiyaki.png', '05-鯛魚燒.png'],
+    ['06-wild.png', '06-WILD.png'],
+  ];
+  return Promise.all(assets.map(async ([path, name]) => {
+    const response = await fetch(`${import.meta.env.BASE_URL}demo/${path}`);
+    if (!response.ok) throw new Error('示範圖片載入失敗，請稍後再試。');
+    return new File([await response.blob()], name, { type: 'image/png' });
+  }));
 }
