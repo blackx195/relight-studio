@@ -1,5 +1,6 @@
 {
   "client_id": "9bb0a2ab-477b-4828-b42e-178c6bd9c7aa",
+  "upload_relay": "https://relight-studio-transfer-blackx195.blackx1955.chatgpt.site/api/upload",
   "redirect_uris": [
     "https://blackx195.github.io/relight-studio/",
     "http://127.0.0.1/"

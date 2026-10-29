@@ -24,6 +24,9 @@ export function parseRpcText(text, id) {
 export class MagnificClient {
   constructor() { this.seq = 0; this.ready = null; this.refreshing = null; }
   get connected() { return !!read('tokens')?.access_token; }
+  async configuration() {
+    return this.config ||= await jsonResponse(await fetch(new URL('./oauth-config.json', location.href), { cache: 'no-store' }), '讀取網站設定');
+  }
   async metadata() {
     return this.meta ||= await jsonResponse(await fetch(SERVER + '/.well-known/oauth-authorization-server', { credentials: 'omit' }), '讀取 OAuth 設定');
   }
@@ -31,7 +34,7 @@ export class MagnificClient {
     const metadata = await this.metadata();
     let client = read('client');
     if (!client || client.redirectUri !== redirectUri()) {
-      const config = await jsonResponse(await fetch(new URL('./oauth-config.json', location.href), { cache: 'no-store' }), '讀取網站登入設定');
+      const config = await this.configuration();
       if (!config.client_id) throw new Error('此網站的 Magnific 登入設定尚未完成。完成 OAuth 用戶端設定後即可產圖；目前可使用排版與匯出。');
       if (!config.redirect_uris?.includes(redirectUri())) throw new Error('此網站網址不在 OAuth 回呼清單內，請使用正式網站。');
       client = { client_id: config.client_id, redirectUri: redirectUri() };
@@ -115,8 +118,16 @@ export class MagnificClient {
     if (!url || !item.path) throw new Error('Magnific 未傳回上傳網址或暫存路徑');
     const parsed = new URL(url);
     if (parsed.protocol !== 'https:') throw new Error('拒絕非 HTTPS 上傳網址');
-    const response = await fetch(url, { method: 'PUT', credentials: 'omit', headers: { 'Content-Type': file.type }, body: file, signal: AbortSignal.timeout(180000) });
-    if (!response.ok) throw new Error(`上傳失敗 (${response.status})`);
+    const config = await this.configuration();
+    if (!config.upload_relay) throw new Error('圖片傳輸服務尚未設定。');
+    let response;
+    try {
+      response = await fetch(config.upload_relay, { method: 'POST', credentials: 'omit', headers: { 'Content-Type': file.type, 'X-Upload-Url': url }, body: file, signal: AbortSignal.timeout(180000) });
+    } catch { throw new Error('無法連接圖片傳輸服務。請稍後按「繼續未完成」重試。'); }
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(`上傳失敗 (${response.status})：${error.message || '圖片傳輸服務未就緒'}`);
+    }
     return creationId(await this.call('creations_finalize_upload', { path: item.path, fileName: file.name || 'image.png', visible: true, ...(folderReference ? { folderReference } : {}) }));
   }
   async waitFor(id, onStatus = () => {}) {
