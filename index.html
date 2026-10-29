@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#141619"><meta name="description" content="使用 Magnific Relight 統一批次打光、自動去背與畫布排版。"><title>Relight Studio — 批量打光工作台</title><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%23d7f08b'/%3E%3Cpath d='M23 6 11 22h9l-3 12 13-17h-9z' fill='%23141619'/%3E%3C/svg%3E"></head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="Relight Studio 首頁"><span class="brand-icon"><i data-lucide="zap"></i></span><strong>relight<span>studio</span></strong><span class="beta">BATCH</span></a>
+    <div class="project-name"><span class="status-dot"></span>Untitled studio <span class="divider">/</span> <span id="save-status">本機工作區</span></div>
+    <div class="top-actions"><button id="help" class="icon-btn" title="使用說明" aria-label="使用說明"><i data-lucide="circle-help"></i></button><button id="connect" class="secondary"><span class="status-dot offline"></span><span id="connection-label">連接 Magnific</span><i data-lucide="arrow-up-right"></i></button></div>
+  </header>
+  <main class="workspace">
+    <aside class="lighting-panel panel">
+      <div class="panel-title"><span class="step">01</span><h1>打光工作室</h1><i data-lucide="sun"></i></div>
+      <p class="panel-intro">設定一次，套用到每一張圖片。</p>
+      <div class="scene-wrap"><div id="light-scene"></div><span class="scene-label"><span class="status-dot"></span>3D LIGHT PREVIEW</span><span class="scene-hint"><i data-lucide="move"></i> 拖曳調整燈光</span><div class="axis-legend"><b>X</b><b>Y</b><b>Z</b></div></div>
+      <div class="light-bar"><div id="light-tabs"></div><button id="add-light" class="icon-btn" aria-label="新增燈光" title="最多 4 盞燈"><i data-lucide="plus"></i></button><button id="remove-light" class="icon-btn" aria-label="移除選取燈光"><i data-lucide="minus"></i></button></div>
+      <div class="subheading">QUICK SELECT <span>快捷方向</span></div>
+      <div class="presets"><button data-preset="front"><i data-lucide="circle-dot"></i>前</button><button data-preset="back"><i data-lucide="circle-dashed"></i>後</button><button data-preset="left"><i data-lucide="arrow-left"></i>左</button><button data-preset="right"><i data-lucide="arrow-right"></i>右</button><button data-preset="top"><i data-lucide="arrow-up"></i>上</button><button data-preset="bottom"><i data-lucide="arrow-down"></i>下</button></div>
+      <div class="light-controls">
+        <div class="control"><label for="azimuth">水平旋轉 <span>Rotate</span></label><div class="range-value"><input id="azimuth" type="range" min="0" max="360" step="1"><div><input id="azimuth-number" type="number" min="0" max="360" aria-label="水平旋轉角度"><span>°</span></div></div></div>
+        <div class="control"><label for="elevation">仰角 <span>Elevation</span></label><div class="range-value"><input id="elevation" type="range" min="-90" max="90" step="1"><div><input id="elevation-number" type="number" min="-90" max="90" aria-label="仰角度數"><span>°</span></div></div></div>
+        <div class="control"><label for="intensity">光線強度 <span>Intensity</span></label><div class="range-value"><input id="intensity" type="range" min="1" max="10" step="0.1"><div><input id="intensity-number" type="number" min="1" max="10" step="0.1" aria-label="光線強度值"></div></div></div>
+        <div class="color-control"><label for="light-color">燈光顏色</label><div class="swatches"><button data-color="#ffffff" style="--swatch:#fff" aria-label="白光"></button><button data-color="#fff1d6" style="--swatch:#fff1d6" aria-label="暖白光"></button><button data-color="#ffae7a" style="--swatch:#ffae7a" aria-label="橙光"></button><button data-color="#a3c7ff" style="--swatch:#a3c7ff" aria-label="藍光"></button><button data-color="#dfadff" style="--swatch:#dfadff" aria-label="紫光"></button><input id="light-color" type="color" value="#fff1d6" title="自訂燈光顏色"></div></div>
+      </div>
+      <div class="panel-footer"><i data-lucide="info"></i><span>3D 畫面用於參考光向；AI 結果以實際產圖為準。</span></div>
+    </aside>
+    <section class="center-panel">
+      <div class="canvas-toolbar"><div><span class="canvas-title">合成畫布</span><span class="badge" id="canvas-size">1920 × 1080</span></div><div><button id="background-upload" class="text-btn"><i data-lucide="image-plus"></i>上傳底圖</button><button id="shuffle" class="text-btn"><i data-lucide="shuffle"></i>隨機排列</button><button id="toggle-guides" class="icon-btn active" title="切換格線" aria-label="切換格線"><i data-lucide="scan"></i></button></div></div>
+      <div class="canvas-area" id="canvas-area">
+        <div class="canvas-topline"><span id="canvas-description">同一盞光，讓整個系列更一致。</span><span id="zoom-label">FIT</span></div>
+        <div id="board" class="board"><canvas id="composition"></canvas><div id="overlays"></div><div id="empty-state"><span class="empty-icon"><i data-lucide="layers-2"></i></span><h2>把你的靈感，放在一起。</h2><p>上傳一組圖片，開始統一打光與排版。</p><button id="empty-upload" class="primary"><i data-lucide="plus"></i>加入圖片</button><button id="load-demo" class="text-btn">先用示範素材試試 <i data-lucide="arrow-right"></i></button></div></div>
+        <div class="canvas-bottomline"><span><i data-lucide="mouse-pointer-2"></i>滑鼠移到圖片上，即可單張重產</span><span id="layout-notice">3 欄 × 2 列</span></div>
+      </div>
+      <section class="assets-panel"><div class="assets-heading"><div><h2>圖片素材 <span id="asset-count">0</span></h2><span id="batch-status">PNG / JPG / WEBP · 每張最高 25 MB</span></div><div><button id="resume" class="text-btn" hidden><i data-lucide="play"></i>繼續未完成</button><button id="add-images" class="secondary small"><i data-lucide="plus"></i>加入圖片</button></div></div><div id="asset-list" class="asset-list"><button class="asset-upload" id="drop-upload"><i data-lucide="upload"></i><span>拖放圖片到這裡<br><small>或點擊選取多張圖片</small></span></button></div><div class="batch-progress" hidden><div id="batch-progress-fill"></div></div></section>
+    </section>
+    <aside class="layout-panel panel">
+      <div class="panel-title"><span class="step">02</span><h2>畫布與排版</h2><i data-lucide="layout-grid"></i></div>
+      <div class="section-label">畫布尺寸 <span>CANVAS</span></div>
+      <div class="two-fields"><label>寬度 <span>px</span><input id="width" type="number" min="64" max="8192" value="1920"></label><span class="times">×</span><label>高度 <span>px</span><input id="height" type="number" min="64" max="8192" value="1080"></label></div>
+      <div class="ratio-pills"><button data-ratio="16:9" class="active">16:9</button><button data-ratio="1:1">1:1</button><button data-ratio="4:5">4:5</button><button data-ratio="9:16">9:16</button></div>
+      <div id="background-card" class="background-card"><div id="bg-swatch"></div><div><strong id="bg-name">純色底圖</strong><span id="bg-description">可上傳圖片，自動符合比例</span></div><button id="clear-background" class="icon-btn" aria-label="移除底圖" title="移除底圖" hidden><i data-lucide="x"></i></button><input id="bg-color" type="color" value="#d8d6cf" aria-label="底圖顏色"></div>
+      <label class="toggle-row"><span>透明背景</span><input id="transparent" type="checkbox" role="switch"><span class="toggle"></span></label>
+      <hr><div class="section-label">排列方式 <span>LAYOUT</span></div>
+      <div class="two-fields"><label>列數 Rows<input id="rows" type="number" min="1" max="100" value="2"></label><label>欄數 Columns<input id="columns" type="number" min="1" max="100" value="3"></label></div>
+      <div class="two-fields"><label>水平間距 <span>px</span><input id="gapX" type="number" min="0" max="2000" value="40"></label><label>垂直間距 <span>px</span><input id="gapY" type="number" min="0" max="2000" value="40"></label></div>
+      <div class="two-fields"><label>X 位移 <span>px</span><input id="offsetX" type="number" min="-8192" max="8192" value="0"></label><label>Y 位移 <span>px</span><input id="offsetY" type="number" min="-8192" max="8192" value="0"></label></div>
+      <div class="control compact"><label for="padding">外圍留白 <output id="padding-value">64 px</output></label><input id="padding" type="range" min="0" max="400" value="64"></div>
+      <div class="control compact"><label for="scale">圖片大小 <output id="scale-value">90%</output></label><input id="scale" type="range" min="10" max="100" value="90"></div>
+      <button id="reset-layout" class="text-btn muted"><i data-lucide="rotate-ccw"></i>重設排版</button>
+      <hr><div class="section-label">產圖設定 <span>OUTPUT</span></div>
+      <div class="two-fields"><label>單圖解析度<select id="resolution"><option value="2k">2K</option><option value="1k">1K</option></select></label><label>同時處理<select id="concurrency"><option value="1">1 張</option><option value="2" selected>2 張</option><option value="3">3 張</option></select></label></div>
+      <label class="folder-field">Magnific 專案<select id="folder"><option value="">Personal（預設）</option></select></label>
+      <div class="auto-cutout"><i data-lucide="scissors"></i><span>每張產圖後自動去背</span><i data-lucide="check"></i></div>
+      <button id="generate" class="primary generate"><i data-lucide="sparkles"></i><span>批量打光並去背</span></button>
+      <button id="stop" class="secondary" hidden>完成目前項目後停止</button>
+      <p class="credits-note" id="credits-note">產圖使用你的 Magnific 額度</p>
+    </aside>
+  </main>
+  <footer class="bottom-bar"><div><span class="status-dot"></span><span id="bottom-status">工作區已準備就緒</span></div><div><button id="save-project" class="text-btn"><i data-lucide="save"></i>儲存專案</button><button id="open-project" class="text-btn"><i data-lucide="folder-open"></i>開啟專案</button><span class="divider">|</span><button id="export-assets" class="text-btn"><i data-lucide="archive"></i>下載單圖 ZIP</button><button id="export-png" class="secondary"><i data-lucide="download"></i>匯出合成 PNG</button></div></footer>
+  <input type="file" id="image-input" accept="image/png,image/jpeg,image/webp" multiple hidden><input type="file" id="background-input" accept="image/png,image/jpeg,image/webp" hidden><input type="file" id="project-input" accept=".relight,.zip" hidden>
+  <div id="toast" role="status" hidden></div>
+  <dialog id="help-dialog"><button class="dialog-close icon-btn" aria-label="關閉說明"><i data-lucide="x"></i></button><span class="eyebrow">RELIGHT STUDIO</span><h2>從一盞光，到一整個系列。</h2><ol><li><strong>連接 Magnific。</strong>透過官方 OAuth 登入，授權僅供此分頁使用；無須 API Key。</li><li><strong>加入原圖。</strong>每批最多 100 張，原始檔會在產圖時上傳 Magnific。</li><li><strong>設定 1–4 盞燈。</strong>拖曳 3D 預覽或輸入角度；整批固定使用按下開始時的數值。</li><li><strong>批量產圖與去背。</strong>每張先 Relight，再去背；失敗的項目可繼續，其他圖片仍會完成。</li><li><strong>排版與下載。</strong>底圖決定畫布比例；圖片超過格數時自動增加列數。隨機排列只改順序。</li></ol><p>圖片上的 ↻ 使用該圖上次的打光設定，從原圖重產並重新去背。排版中的示範素材沒有經過 AI 打光。</p><p>工作區自動保存在此瀏覽器。換裝置前請下載「專案」，其中包含原圖、結果與設定，但不包含登入憑證。瀏覽器儲存仍可能被清除。</p><p><a href="https://www.magnific.com/ai/docs/relight" target="_blank" rel="noopener">Magnific Relight 說明 ↗</a> · <a href="https://docs.magnific.com/modelcontextprotocol" target="_blank" rel="noopener">官方 MCP 文件 ↗</a></p></dialog>
+  <script type="module" src="./src/app.js"></script>
+</body></html>
