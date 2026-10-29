@@ -24,7 +24,7 @@
       <div class="panel-footer"><i data-lucide="info"></i><span>3D 畫面用於參考光向；AI 結果以實際產圖為準。</span></div>
     </aside>
     <section class="center-panel">
-      <div class="canvas-toolbar"><div><span class="canvas-title">合成畫布</span><span class="badge" id="canvas-size">1920 × 1080</span></div><div><button id="background-upload" class="text-btn"><i data-lucide="image-plus"></i>上傳底圖</button><button id="shuffle" class="text-btn"><i data-lucide="shuffle"></i>隨機排列</button><button id="toggle-guides" class="icon-btn active" title="切換格線" aria-label="切換格線"><i data-lucide="scan"></i></button></div></div>
+      <div class="canvas-toolbar"><div><span class="canvas-title">合成畫布</span><span class="badge" id="canvas-size">1920 × 1080</span></div><div><button id="shuffle" class="text-btn"><i data-lucide="shuffle"></i>隨機排列</button><button id="toggle-guides" class="icon-btn active" title="切換格線" aria-label="切換格線"><i data-lucide="scan"></i></button></div></div>
       <div class="canvas-area" id="canvas-area">
         <div class="canvas-topline"><span id="canvas-description">同一盞光，讓整個系列更一致。</span><span id="zoom-label">FIT</span></div>
         <div id="board" class="board"><canvas id="composition"></canvas><div id="overlays"></div><div id="empty-state"><span class="empty-icon"><i data-lucide="layers-2"></i></span><button id="empty-upload" class="primary"><i data-lucide="plus"></i>加入圖片</button><button id="load-demo" class="text-btn">先用示範素材試試 <i data-lucide="arrow-right"></i></button></div></div>
@@ -38,6 +38,7 @@
       <div class="two-fields"><label>寬度 <span>px</span><input id="width" type="number" min="64" max="8192" value="1920"></label><span class="times">×</span><label>高度 <span>px</span><input id="height" type="number" min="64" max="8192" value="1080"></label></div>
       <div class="ratio-pills"><button data-ratio="16:9" class="active">16:9</button><button data-ratio="1:1">1:1</button><button data-ratio="4:5">4:5</button><button data-ratio="9:16">9:16</button></div>
       <div id="background-card" class="background-card"><div id="bg-swatch"></div><div><strong id="bg-name">純色底圖</strong><span id="bg-description">可上傳圖片，自動符合比例</span></div><button id="clear-background" class="icon-btn" aria-label="移除底圖" title="移除底圖" hidden><i data-lucide="x"></i></button><input id="bg-color" type="color" value="#d8d6cf" aria-label="底圖顏色"></div>
+      <button id="background-upload" class="secondary background-upload-button"><i data-lucide="image-plus"></i>上傳底圖</button>
       <label class="toggle-row"><span>透明背景</span><input id="transparent" type="checkbox" role="switch"><span class="toggle"></span></label>
       <hr><div class="section-label">排列方式 <span>LAYOUT</span></div>
       <div class="two-fields"><label>列數 Rows<input id="rows" type="number" min="1" max="100" value="2"></label><label>欄數 Columns<input id="columns" type="number" min="1" max="100" value="3"></label></div>
