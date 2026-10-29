@@ -3,6 +3,7 @@ import { createIcons, Zap, ArrowUpRight, CircleHelp, Sun, Plus, Minus, CircleDot
 import { zipSync, unzipSync, strToU8, strFromU8 } from 'fflate';
 import { DEFAULT_LIGHTS, DEFAULT_LAYOUT, clamp, gridLayout, shuffle, snapshotRecipe, safeFilename, canvasItems } from './core.js';
 import { bindNumericScrub } from './numeric-scrub.js';
+import { createQuickTour } from './tour.js';
 import { loadProject, saveProject } from './storage.js';
 import { MagnificClient } from './magnific.js';
 import { LightScene, createDemoAssets } from './scene.js';
@@ -377,7 +378,8 @@ on('background-input', 'change', async e => { if (e.target.files[0]) await loadB
 on('clear-background', 'click', () => { if (state.background) release(state.background); state.background = null; renderLayout(); scheduleSave(); });
 on('load-demo', 'click', async () => { $('load-demo').disabled = true; try { await addFiles(await createDemoAssets(), true); toast('示範素材已加入，可以試用排版與匯出。'); } finally { $('load-demo').disabled = false; } });
 on('connect', 'click', connect);
-on('help', 'click', () => $('help-dialog').showModal());
+const quickTour = createQuickTour($('help'), () => $('help-dialog').showModal());
+on('help', 'click', () => quickTour.start());
 document.querySelector('.dialog-close').onclick = () => $('help-dialog').close();
 on('add-light', 'click', () => { if (state.lights.length >= 4) return; state.lights.push({ id: crypto.randomUUID(), azimuth: 270, elevation: 20, intensity: 3, color: '#a3c7ff', type: 'gel' }); state.selectedLight = state.lights.length - 1; renderLights(); scheduleSave(); });
 on('remove-light', 'click', () => { if (state.lights.length <= 1) return; state.lights.splice(state.selectedLight, 1); state.selectedLight = Math.min(state.selectedLight, state.lights.length - 1); renderLights(); scheduleSave(); });
@@ -449,5 +451,6 @@ async function boot() {
   renderLights(); renderLayout(); renderAssets();
   try { await client.callback(); if (client.connected) await refreshAccount(); } catch (error) { toast('Magnific 連線：' + error.message, true); }
   if (!client.connected) try { const config = await (await fetch('./oauth-config.json', { cache: 'no-store' })).json(); if (!config.client_id) { $('connection-label').textContent = 'Magnific 待設定'; $('credits-note').textContent = '登入整合待設定 · 排版與匯出可先使用'; } } catch { /* login reports the actionable configuration error */ }
+  quickTour.maybeStart();
 }
 boot();
