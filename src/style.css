@@ -23,6 +23,7 @@
 .comparison-toolbar .preview-modes{flex-shrink:0}
 #comparison-note{font-size:10px;color:var(--muted);line-height:1.6;flex:1;min-width:140px}
 .settings-section{min-width:0}
+.brand-logo{display:block;width:32px;height:32px;object-fit:contain;flex-shrink:0}
 .settings-section>.section-label:first-child{margin-top:18px}
 .scrub-hint{font-size:9px;color:#839188;margin:-5px 0 15px;line-height:1.6}
 input.scrub-input{cursor:ns-resize;appearance:textfield}
