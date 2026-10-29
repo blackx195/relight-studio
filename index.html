@@ -28,6 +28,7 @@
     </aside>
     <section class="center-panel">
       <div class="canvas-toolbar"><div><span class="canvas-title">合成畫布</span><span class="badge" id="canvas-size">1920 × 1080</span></div><div><button id="shuffle" class="text-btn"><i data-lucide="shuffle"></i>隨機排列</button><button id="toggle-guides" class="icon-btn active" title="切換格線" aria-label="切換格線"><i data-lucide="scan"></i></button></div></div>
+      <div class="comparison-toolbar"><div class="preview-modes" role="group" aria-label="合成畫布產圖前後比較"><button id="compare-original" aria-pressed="false">原圖</button><button id="compare-result" aria-pressed="true">打光後</button></div><span id="comparison-note" role="status">加入圖片後可比較產圖前後</span></div>
       <div class="canvas-area" id="canvas-area">
         <div class="canvas-topline"><span id="canvas-description">同一盞光，讓整個系列更一致。</span><span id="zoom-label">FIT</span></div>
         <div id="board" class="board"><canvas id="composition"></canvas><div id="overlays"></div><div id="empty-state"><span class="empty-icon"><i data-lucide="layers-2"></i></span><button id="empty-upload" class="primary"><i data-lucide="plus"></i>加入圖片</button><button id="load-demo" class="text-btn">先用示範素材試試 <i data-lucide="arrow-right"></i></button></div></div>
@@ -36,27 +37,35 @@
       <section class="assets-panel"><div class="assets-heading"><div><h2>圖片素材 <span id="asset-count">0</span></h2><span id="batch-status">PNG / JPG / WEBP · 每張最高 25 MB</span></div><div><button id="resume" class="text-btn" hidden><i data-lucide="play"></i>繼續未完成</button><button id="add-images" class="secondary small"><i data-lucide="plus"></i>加入圖片</button></div></div><div id="asset-list" class="asset-list"><button class="asset-upload" id="drop-upload"><i data-lucide="upload"></i><span>拖放圖片到這裡<br><small>或點擊選取多張圖片</small></span></button></div><div class="batch-progress" hidden><div id="batch-progress-fill"></div></div></section>
     </section>
     <aside class="layout-panel panel">
-      <div class="panel-title"><span class="step">02</span><h2>畫布與排版</h2><i data-lucide="layout-grid"></i></div>
+      <div class="panel-title"><span class="step">02</span><h2>產圖與排版</h2><i data-lucide="layout-grid"></i></div>
+      <section class="settings-section" aria-label="產圖設定">
+      <div class="section-label">產圖設定 <span>OUTPUT</span></div>
+      <div class="two-fields"><label>單圖解析度<select id="resolution"><option value="2k">2K</option><option value="1k">1K</option></select></label><label>同時處理<select id="concurrency"><option value="1">1 張</option><option value="2" selected>2 張</option><option value="3">3 張</option><option value="max">MAX（全部）</option></select></label></div>
+      <div class="folder-field"><div class="project-heading"><label for="folder">Magnific 專案</label><button id="refresh-projects" class="icon-btn" title="重新整理專案" aria-label="重新整理專案"><i data-lucide="refresh-cw"></i></button></div><select id="folder" aria-describedby="projects-status"><option value="">Personal（預設）</option></select><small id="projects-status" role="status">連接帳號後自動載入專案</small></div>
+      <div class="auto-cutout"><i data-lucide="scissors"></i><span>每張產圖後自動去背</span><i data-lucide="check"></i></div>
+      <button id="generate" class="primary generate"><i data-lucide="sparkles"></i><span>批量打光並去背</span></button>
+      <button id="stop" class="secondary" hidden>完成目前項目後停止</button>
+      <p class="credits-note" id="credits-note">產圖使用 Magnific credits · 官網 Unlimited 不適用</p>
+      </section>
+      <hr>
+      <section class="settings-section" aria-label="畫布尺寸與底圖">
       <div class="section-label">畫布尺寸 <span>CANVAS</span></div>
       <div class="two-fields"><label>寬度 <span>px</span><input id="width" type="number" min="64" max="8192" value="1920"></label><span class="times">×</span><label>高度 <span>px</span><input id="height" type="number" min="64" max="8192" value="1080"></label></div>
       <div class="ratio-pills"><button data-ratio="16:9" class="active">16:9</button><button data-ratio="1:1">1:1</button><button data-ratio="4:5">4:5</button><button data-ratio="9:16">9:16</button></div>
       <div id="background-card" class="background-card"><div id="bg-swatch"></div><div><strong id="bg-name">純色底圖</strong><span id="bg-description">可上傳圖片，自動符合比例</span></div><button id="clear-background" class="icon-btn" aria-label="移除底圖" title="移除底圖" hidden><i data-lucide="x"></i></button><input id="bg-color" type="color" value="#333333" aria-label="底圖顏色"></div>
       <button id="background-upload" class="secondary background-upload-button"><i data-lucide="image-plus"></i>上傳底圖</button>
       <label class="toggle-row"><span>透明背景</span><input id="transparent" type="checkbox" role="switch"><span class="toggle"></span></label>
-      <hr><div class="section-label">排列方式 <span>LAYOUT</span></div>
+      </section>
+      <hr>
+      <section class="settings-section" aria-label="排列方式">
+      <div class="section-label">排列方式 <span>LAYOUT</span></div><p class="scrub-hint">數值框按住左鍵上下拖曳調整</p>
       <div class="two-fields"><label>列數 Rows<input id="rows" type="number" min="1" max="100" value="2"></label><label>欄數 Columns<input id="columns" type="number" min="1" max="100" value="3"></label></div>
       <div class="two-fields"><label>水平間距 <span>px</span><input id="gapX" type="number" min="0" max="2000" value="40"></label><label>垂直間距 <span>px</span><input id="gapY" type="number" min="0" max="2000" value="40"></label></div>
       <div class="two-fields"><label>X 位移 <span>px</span><input id="offsetX" type="number" min="-8192" max="8192" value="0"></label><label>Y 位移 <span>px</span><input id="offsetY" type="number" min="-8192" max="8192" value="0"></label></div>
       <div class="control compact"><label for="padding">外圍留白 <output id="padding-value">64 px</output></label><input id="padding" type="range" min="0" max="400" value="64"></div>
       <div class="control compact"><label for="scale">圖片大小 <output id="scale-value">90%</output></label><input id="scale" type="range" min="10" max="100" value="90"></div>
       <button id="reset-layout" class="text-btn muted"><i data-lucide="rotate-ccw"></i>重設排版</button>
-      <hr><div class="section-label">產圖設定 <span>OUTPUT</span></div>
-      <div class="two-fields"><label>單圖解析度<select id="resolution"><option value="2k">2K</option><option value="1k">1K</option></select></label><label>同時處理<select id="concurrency"><option value="1">1 張</option><option value="2" selected>2 張</option><option value="3">3 張</option></select></label></div>
-      <div class="folder-field"><div class="project-heading"><label for="folder">Magnific 專案</label><button id="refresh-projects" class="icon-btn" title="重新整理專案" aria-label="重新整理專案"><i data-lucide="refresh-cw"></i></button></div><select id="folder" aria-describedby="projects-status"><option value="">Personal（預設）</option></select><small id="projects-status" role="status">連接帳號後自動載入專案</small></div>
-      <div class="auto-cutout"><i data-lucide="scissors"></i><span>每張產圖後自動去背</span><i data-lucide="check"></i></div>
-      <button id="generate" class="primary generate"><i data-lucide="sparkles"></i><span>批量打光並去背</span></button>
-      <button id="stop" class="secondary" hidden>完成目前項目後停止</button>
-      <p class="credits-note" id="credits-note">產圖使用 Magnific credits · 官網 Unlimited 不適用</p>
+      </section>
     </aside>
   </main>
   <footer class="bottom-bar"><div><span class="status-dot"></span><span id="bottom-status">工作區已準備就緒</span></div><div><button id="save-project" class="text-btn"><i data-lucide="save"></i>儲存專案</button><button id="open-project" class="text-btn"><i data-lucide="folder-open"></i>開啟專案</button><span class="divider">|</span><button id="export-assets" class="text-btn"><i data-lucide="archive"></i>下載單圖 ZIP</button><button id="export-png" class="secondary"><i data-lucide="download"></i>匯出合成 PNG</button></div></footer>

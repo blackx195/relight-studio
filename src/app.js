@@ -1,7 +1,8 @@
 import './style.css';
 import { createIcons, Zap, ArrowUpRight, CircleHelp, Sun, Plus, Minus, CircleDot, CircleDashed, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Move, Info, ImagePlus, Shuffle, Scan, Layers2, MousePointer2, Play, Upload, X, RotateCcw, Scissors, Check, Sparkles, Save, FolderOpen, Archive, Download, RefreshCw, LayoutGrid } from 'lucide';
 import { zipSync, unzipSync, strToU8, strFromU8 } from 'fflate';
-import { DEFAULT_LIGHTS, DEFAULT_LAYOUT, clamp, gridLayout, shuffle, snapshotRecipe, safeFilename } from './core.js';
+import { DEFAULT_LIGHTS, DEFAULT_LAYOUT, clamp, gridLayout, shuffle, snapshotRecipe, safeFilename, canvasItems } from './core.js';
+import { bindNumericScrub } from './numeric-scrub.js';
 import { loadProject, saveProject } from './storage.js';
 import { MagnificClient } from './magnific.js';
 import { LightScene, createDemoAssets } from './scene.js';
@@ -12,7 +13,7 @@ const icons = () => createIcons({ icons: iconSet });
 const $ = id => document.getElementById(id);
 const client = new MagnificClient();
 const state = { lights: structuredClone(DEFAULT_LIGHTS), layout: { ...DEFAULT_LAYOUT }, selectedLight: 0, items: [], background: null, preview: { mode: 'image', itemId: null, file: null, name: '' }, resolution: '2k', concurrency: 2, folder: '', guides: true };
-let scene, busy = false, stopRequested = false, saveTimer, toastTimer, saveWarningShown = false, frame, projectsLoading = false;
+let scene, busy = false, stopRequested = false, saveTimer, toastTimer, saveWarningShown = false, frame, projectsLoading = false, canvasView = 'result';
 const statuses = { ready: '等待打光', demo: '示範素材', done: '已打光・已去背', failed: '處理失敗', interrupted: '可繼續處理', queued: '排隊中', processing: '處理中' };
 function toast(message, error = false) { const box = $('toast'); box.textContent = message; box.classList.toggle('error', error); box.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { box.hidden = true; }, error ? 12000 : 5000); }
 function on(id, event, action) { $(id).addEventListener(event, async e => { try { await action(e); } catch (error) { toast(error.message || String(error), true); } }); }
@@ -26,9 +27,14 @@ async function persist() { clearTimeout(saveTimer); try { await saveProject(snap
 function scheduleSave() { $('save-status').textContent = '儲存中…'; clearTimeout(saveTimer); saveTimer = setTimeout(() => persist().catch(() => {}), 500); }
 function requestDraw() { cancelAnimationFrame(frame); frame = requestAnimationFrame(draw); }
 
-async function prepareBlob(blob, crop = false) {
-  const bitmap = await createImageBitmap(blob);
+async function prepareBlob(blob, crop = false, maxEdge = Infinity) {
+  let bitmap = await createImageBitmap(blob);
   if (bitmap.width * bitmap.height > 40e6 || bitmap.width > 16384 || bitmap.height > 16384) { bitmap.close(); throw new Error('圖片尺寸過大，請使用 40 MP 以下的圖片。'); }
+  if (Math.max(bitmap.width, bitmap.height) > maxEdge) {
+    const source = bitmap, factor = maxEdge / Math.max(source.width, source.height);
+    try { bitmap = await createImageBitmap(source, { resizeWidth: Math.max(1, Math.round(source.width * factor)), resizeHeight: Math.max(1, Math.round(source.height * factor)), resizeQuality: 'high' }); }
+    finally { source.close(); }
+  }
   let bounds = { x: 0, y: 0, width: bitmap.width, height: bitmap.height };
   if (crop) {
     const factor = Math.min(1, 512 / Math.max(bitmap.width, bitmap.height));
@@ -41,8 +47,16 @@ async function prepareBlob(blob, crop = false) {
   }
   return { bitmap, bounds, url: URL.createObjectURL(blob), width: bounds.width, height: bounds.height };
 }
-function release(item) { item.bitmap?.close(); if (item.url) URL.revokeObjectURL(item.url); }
-async function updateImage(item) { const prepared = await prepareBlob(item.output || item.original, !!item.output || item.status === 'demo'); release(item); Object.assign(item, prepared); }
+function release(item, keepOriginal = false) { item.bitmap?.close(); if (item.url) URL.revokeObjectURL(item.url); if (!keepOriginal && item.originalView) { release(item.originalView); item.originalView = null; } }
+async function updateImage(item, itemCount = state.items.length) {
+  const prepared = await prepareBlob(item.output || item.original, !!item.output || item.status === 'demo');
+  let originalView = item.originalView;
+  try {
+    // Keep comparison copies within a small pixel budget, leaving export at full resolution.
+    if (item.output && !originalView) originalView = await prepareBlob(item.original, true, Math.max(192, Math.floor(2048 / Math.sqrt(Math.max(1, itemCount)))));
+  } catch (error) { release(prepared); throw error; }
+  release(item, true); Object.assign(item, prepared, { originalView });
+}
 async function addFiles(files, demo = false) {
   if (busy) throw new Error('請等目前批次完成，再加入圖片。');
   const inputs = [...files];
@@ -108,6 +122,7 @@ function renderLayout() {
 }
 function renderAssets() {
   renderPreview();
+  renderComparison();
   const list = $('asset-list'); list.replaceChildren();
   for (const item of state.items) {
     const card = document.createElement('div'); card.className = 'asset-card ' + item.status; card.title = item.error || item.name;
@@ -135,16 +150,24 @@ function renderAssets() {
   icons();
 }
 
-function paint(canvas, guides = false) {
+function renderComparison() {
+  const done = state.items.filter(item => item.output).length, total = state.items.length;
+  $('compare-original').setAttribute('aria-pressed', canvasView === 'original');
+  $('compare-result').setAttribute('aria-pressed', canvasView === 'result');
+  $('compare-original').disabled = $('compare-result').disabled = !total;
+  $('comparison-note').textContent = !total ? '加入圖片後可比較產圖前後' : canvasView === 'original' ? '原圖預覽 · 匯出使用打光後結果' : !done ? '尚無產圖結果，目前顯示原圖' : `${done}/${total} 張已打光、去背${done < total ? ' · 未完成項目顯示原圖' : ''}`;
+}
+
+function paint(canvas, view = 'result') {
   const { width, height } = state.layout;
   if (canvas.width !== width) canvas.width = width;
   if (canvas.height !== height) canvas.height = height;
   const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, width, height);
   if (state.background) ctx.drawImage(state.background.bitmap, 0, 0, width, height);
   else if (!state.layout.transparent) { ctx.fillStyle = state.layout.backgroundColor; ctx.fillRect(0, 0, width, height); }
-  const grid = gridLayout(state.items, state.layout);
-  for (let index = 0; index < state.items.length; index++) {
-    const item = state.items[index], rect = grid.slots[index], b = item.bounds;
+  const displayed = canvasItems(state.items, view), grid = gridLayout(displayed, state.layout);
+  for (let index = 0; index < displayed.length; index++) {
+    const item = displayed[index], rect = grid.slots[index], b = item.bounds;
     if (item.bitmap && b) ctx.drawImage(item.bitmap, b.x, b.y, b.width, b.height, rect.x, rect.y, rect.width, rect.height);
   }
   return grid;
@@ -158,7 +181,7 @@ function draw() {
     const availableHeight = Math.max(120, area.clientHeight - parseFloat(css.paddingTop) - parseFloat(css.paddingBottom) - 65);
     board.style.maxWidth = `${availableHeight * width / height}px`;
   } else board.style.maxWidth = height > width ? `${Math.max(220, 470 * width / height)}px` : '100%';
-  const grid = paint($('composition'));
+  const grid = paint($('composition'), canvasView);
   $('layout-notice').textContent = `${grid.columns} 欄 × ${grid.rows} 列${grid.expanded ? '（自動增加列數）' : ''}`;
   const overlays = $('overlays'); overlays.replaceChildren();
   const setPosition = (el, rect) => Object.assign(el.style, { left: `${rect.x / width * 100}%`, top: `${rect.y / height * 100}%`, width: `${rect.width / width * 100}%`, height: `${rect.height / height * 100}%` });
@@ -167,7 +190,7 @@ function draw() {
     if (state.guides) { const guide = document.createElement('div'); guide.className = 'guide-cell'; setPosition(guide, rect.cell); overlays.append(guide); }
     const overlay = document.createElement('div'); overlay.className = 'item-overlay'; setPosition(overlay, rect);
     const refresh = button(`重產 ${item.name}（沿用上次打光設定）`, 'refresh-button', 'refresh-cw', () => regenerate(item)); refresh.disabled = busy;
-    const label = document.createElement('span'); label.className = 'item-label'; label.textContent = item.progress || `${item.name} · ${statuses[item.status]}`;
+    const label = document.createElement('span'); label.className = 'item-label'; label.textContent = canvasView === 'original' ? `${item.name} · 原圖` : item.progress || `${item.name} · ${statuses[item.status]}`;
     overlay.append(refresh, label); overlays.append(overlay);
   }
   icons();
@@ -196,10 +219,10 @@ async function restore(data) {
   }
   const preparedItems = [];
   try {
-    for (const raw of data.items) { const item = { ...raw, status: ['processing', 'queued'].includes(raw.status) ? 'interrupted' : raw.status }; await updateImage(item); preparedItems.push(item); }
+    for (const raw of data.items) { const item = { ...raw, status: ['processing', 'queued'].includes(raw.status) ? 'interrupted' : raw.status }; await updateImage(item, data.items.length); preparedItems.push(item); }
   } catch (e) { preparedItems.forEach(release); throw e; }
   state.items.forEach(release); if (state.background) release(state.background);
-  Object.assign(state, { lights: data.lights, layout: { ...DEFAULT_LAYOUT, ...data.layout }, preview, resolution: data.resolution || '2k', concurrency: clamp(data.concurrency || 2, 1, 3), folder: data.folder || '', items: preparedItems, background: null, selectedLight: 0 });
+  Object.assign(state, { lights: data.lights, layout: { ...DEFAULT_LAYOUT, ...data.layout }, preview, resolution: data.resolution || '2k', concurrency: data.concurrency === 'max' ? 'max' : clamp(data.concurrency || 2, 1, 3), folder: data.folder || '', items: preparedItems, background: null, selectedLight: 0 });
   if (data.background?.file) await loadBackground(data.background.file, true);
   renderLights(); renderLayout(); renderAssets(); requestDraw();
 }
@@ -391,10 +414,13 @@ document.querySelectorAll('[data-ratio]').forEach(b => b.onclick = () => { if (s
 on('bg-color', 'input', e => { state.layout.backgroundColor = e.target.value; renderLayout(); scheduleSave(); });
 on('transparent', 'change', e => { state.layout.transparent = e.target.checked; renderLayout(); scheduleSave(); });
 on('shuffle', 'click', () => { state.items = shuffle(state.items); renderAssets(); requestDraw(); scheduleSave(); });
+on('compare-original', 'click', () => { canvasView = 'original'; renderComparison(); requestDraw(); });
+on('compare-result', 'click', () => { canvasView = 'result'; renderComparison(); requestDraw(); });
 on('toggle-guides', 'click', () => { state.guides = !state.guides; $('toggle-guides').classList.toggle('active', state.guides); requestDraw(); });
 on('reset-layout', 'click', () => { const { width, height, backgroundColor, transparent } = state.layout; state.layout = { ...DEFAULT_LAYOUT, width, height, backgroundColor, transparent }; renderLayout(); scheduleSave(); });
 on('resolution', 'change', e => { state.resolution = e.target.value; scheduleSave(); });
-on('concurrency', 'change', e => { state.concurrency = Number(e.target.value); scheduleSave(); });
+on('concurrency', 'change', e => { state.concurrency = e.target.value === 'max' ? 'max' : Number(e.target.value); scheduleSave(); });
+for (const id of ['rows', 'columns', 'gapX', 'gapY', 'offsetX', 'offsetY']) bindNumericScrub($(id), ['rows', 'columns'].includes(id) ? 8 : 2);
 on('folder', 'change', e => { state.folder = e.target.value; scheduleSave(); });
 on('refresh-projects', 'click', refreshProjects);
 on('generate', 'click', () => {

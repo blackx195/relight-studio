@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { gridLayout, DEFAULT_LAYOUT, lightPosition, normalizedLights, shuffle, snapshotRecipe, unwrapMcp, creationId } from '../src/core.js';
+import { gridLayout, DEFAULT_LAYOUT, lightPosition, normalizedLights, shuffle, snapshotRecipe, unwrapMcp, creationId, canvasItems } from '../src/core.js';
 import { parseRpcText, MagnificClient } from '../src/magnific.js';
 import { processItem, runPool } from '../src/pipeline.js';
 
@@ -69,3 +69,26 @@ test('bounded concurrency and one failure do not block other images', async () =
   assert.equal(maximum, 2); assert.equal(results[1].status, 'rejected'); assert.equal(results[3].value, 4);
 });
 test('stop leaves unstarted images untouched', async () => { let stop = false, count = 0; const result = await runPool([1, 2, 3], 1, async id => { count++; stop = true; return id; }, () => stop); assert.equal(count, 1); assert.equal(result.length, 1); });
+
+test('MAX starts every image before any finishes and keeps failure isolated', async () => {
+  let release, started = 0;
+  const gate = new Promise(resolve => { release = resolve; });
+  const work = runPool([1, 2, 3, 4, 5, 6, 7], 'max', async id => { started++; await gate; if (id === 4) throw new Error('one failure'); return id; });
+  assert.equal(started, 7); release();
+  const results = await work;
+  assert.equal(results.length, 7); assert.equal(results[3].status, 'rejected');
+  assert.equal(results.filter(result => result.status === 'fulfilled').length, 6);
+  assert.deepEqual(await runPool([], 'max', () => { throw new Error('must not run'); }), []);
+});
+
+test('original comparison uses source dimensions and leaves result/export data intact', () => {
+  const result = { id: 'finished', width: 100, height: 200, bitmap: 'result', bounds: {x: 10, y: 10, width: 100, height: 200}, originalView: { width: 400, height: 300, bitmap: 'source', bounds: {x: 0, y: 0, width: 400, height: 300} } };
+  const pending = { id: 'pending', width: 300, height: 300, bitmap: 'pending-original' };
+  const before = canvasItems([result, pending], 'original'), after = canvasItems([result, pending]);
+  assert.equal(before[0].bitmap, 'source'); assert.equal(before[1].bitmap, 'pending-original');
+  assert.equal(after[0], result); assert.equal(after[0].bitmap, 'result');
+  const a = gridLayout(before, DEFAULT_LAYOUT), b = gridLayout(after, DEFAULT_LAYOUT);
+  assert.deepEqual(a.slots[0].cell, b.slots[0].cell);
+  assert.ok(Math.abs(a.slots[0].width / a.slots[0].height - 4 / 3) < 1e-9);
+  assert.ok(Math.abs(b.slots[0].width / b.slots[0].height - 1 / 2) < 1e-9);
+});

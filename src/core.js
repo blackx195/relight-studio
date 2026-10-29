@@ -3,6 +3,9 @@ import { decode } from '@toon-format/toon';
 export const clamp = (n, min, max) => Math.min(max, Math.max(min, Number(n) || 0));
 export const DEFAULT_LIGHTS = [{ id: 'key', azimuth: 45, elevation: 35, intensity: 5, color: '#fff1d6', type: 'gel' }];
 export const DEFAULT_LAYOUT = { width: 1920, height: 1080, rows: 2, columns: 3, gapX: 40, gapY: 40, padding: 64, offsetX: 0, offsetY: 0, scale: 90, backgroundColor: '#333333', transparent: false };
+export function canvasItems(items, view = 'result') {
+  return items.map(item => view === 'original' && item.originalView ? { ...item, ...item.originalView } : item);
+}
 export function normalizedLights(lights) {
   if (!Array.isArray(lights) || lights.length < 1 || lights.length > 4) throw new Error('請設定 1–4 盞燈。');
   return lights.map(l => ({ azimuth: ((Math.round(clamp(l.azimuth, -180, 360)) + 180) % 360) - 180, elevation: Math.round(clamp(l.elevation, -90, 90)), intensity: Math.round(clamp(l.intensity, 1, 10)), type: l.type === 'neutral' ? 'neutral' : 'gel', ...(l.type === 'neutral' ? {} : { color: /^#[0-9a-f]{6}$/i.test(l.color) ? l.color : '#ffffff' }) }));

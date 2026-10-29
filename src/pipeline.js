@@ -42,7 +42,8 @@ export async function processItem(item, recipe, client, checkpoint, progress) {
 export async function runPool(items, concurrency, run, shouldStop = () => false) {
   let next = 0;
   const results = [];
-  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+  const workers = concurrency === 'max' ? items.length : Math.min(Math.max(1, Math.floor(Number(concurrency) || 1)), items.length);
+  await Promise.all(Array.from({ length: workers }, async () => {
     while (next < items.length && !shouldStop()) {
       const index = next++;
       try { results[index] = { status: 'fulfilled', value: await run(items[index]) }; }
