@@ -122,7 +122,7 @@ export class MagnificClient {
     if (!config.upload_relay) throw new Error('圖片傳輸服務尚未設定。');
     let response;
     try {
-      response = await fetch(config.upload_relay, { method: 'POST', credentials: 'omit', headers: { 'Content-Type': file.type, 'X-Upload-Url': url }, body: file, signal: AbortSignal.timeout(180000) });
+      response = await fetch(config.upload_relay, { method: 'POST', credentials: 'omit', headers: { 'Content-Type': file.type, Authorization: 'MagnificUpload ' + url }, body: file, signal: AbortSignal.timeout(180000) });
     } catch { throw new Error('無法連接圖片傳輸服務。請稍後按「繼續未完成」重試。'); }
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
