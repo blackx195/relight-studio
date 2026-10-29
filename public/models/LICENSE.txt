@@ -1,0 +1,10 @@
+Marble Bust 01
+Creator: Rico Cilliers
+Source: https://polyhaven.com/a/marble_bust_01
+License: CC0 1.0 Universal (public domain dedication)
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Poly Haven license information: https://polyhaven.com/license
+
+Relight Studio adaptation: geometry retained; original marble textures removed
+and replaced with a matte white plaster material. Packaged as a self-contained GLB.

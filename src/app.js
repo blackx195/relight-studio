@@ -11,7 +11,7 @@ const iconSet = { Zap, ArrowUpRight, CircleHelp, Sun, Plus, Minus, CircleDot, Ci
 const icons = () => createIcons({ icons: iconSet });
 const $ = id => document.getElementById(id);
 const client = new MagnificClient();
-const state = { lights: structuredClone(DEFAULT_LIGHTS), layout: { ...DEFAULT_LAYOUT }, selectedLight: 0, items: [], background: null, resolution: '2k', concurrency: 2, folder: '', guides: true };
+const state = { lights: structuredClone(DEFAULT_LIGHTS), layout: { ...DEFAULT_LAYOUT }, selectedLight: 0, items: [], background: null, preview: { mode: 'image', itemId: null, file: null, name: '' }, resolution: '2k', concurrency: 2, folder: '', guides: true };
 let scene, busy = false, stopRequested = false, saveTimer, toastTimer, saveWarningShown = false, frame, projectsLoading = false;
 const statuses = { ready: '等待打光', demo: '示範素材', done: '已打光・已去背', failed: '處理失敗', interrupted: '可繼續處理', queued: '排隊中', processing: '處理中' };
 function toast(message, error = false) { const box = $('toast'); box.textContent = message; box.classList.toggle('error', error); box.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { box.hidden = true; }, error ? 12000 : 5000); }
@@ -19,7 +19,7 @@ function on(id, event, action) { $(id).addEventListener(event, async e => { try 
 function icon(name) { const el = document.createElement('i'); el.dataset.lucide = name; return el; }
 function button(title, className, iconName, action) { const el = document.createElement('button'); el.className = className; el.title = title; el.setAttribute('aria-label', title); el.append(icon(iconName)); el.addEventListener('click', async e => { e.stopPropagation(); try { await action(); } catch (error) { toast(error.message, true); } }); return el; }
 function snapshot() {
-  return { version: 1, lights: state.lights, layout: state.layout, resolution: state.resolution, concurrency: state.concurrency, folder: state.folder, background: state.background ? { file: state.background.file, name: state.background.name } : null,
+  return { version: 1, lights: state.lights, layout: state.layout, resolution: state.resolution, concurrency: state.concurrency, folder: state.folder, preview: { ...state.preview }, background: state.background ? { file: state.background.file, name: state.background.name } : null,
     items: state.items.map(({ id, name, original, output, sourceId, relightId, cutoutId, recipe, status, error, uncertain }) => ({ id, name, original, output, sourceId, relightId, cutoutId, recipe, status, error, uncertain })) };
 }
 async function persist() { clearTimeout(saveTimer); try { await saveProject(snapshot()); $('save-status').textContent = '已自動儲存'; } catch (error) { $('save-status').textContent = '本機儲存失敗'; if (!saveWarningShown) toast('瀏覽器儲存空間不足或無法存取；請下載專案備份。', true); saveWarningShown = true; throw error; } }
@@ -61,6 +61,26 @@ async function addFiles(files, demo = false) {
   if (errors.length) toast(errors.join('；'), true);
 }
 
+function renderPreview() {
+  const item = state.items.find(item => item.id === state.preview.itemId) || state.items[0];
+  state.preview.itemId = item?.id || null;
+  const model = state.preview.mode === 'model';
+  $('preview-image').setAttribute('aria-pressed', !model); $('preview-model').setAttribute('aria-pressed', model);
+  $('preview-source').hidden = model; $('model-credit').hidden = !model;
+  $('preview-name').textContent = state.preview.file ? state.preview.name : item ? `首張素材 · ${item.name}` : '上傳素材後，預設顯示第一張圖片';
+  $('preview-name').title = $('preview-name').textContent;
+  $('preview-reset').hidden = !state.preview.file;
+  $('model-status').textContent = scene?.bustStatus || '';
+  scene?.setMode(state.preview.mode);
+  scene?.setImage(state.preview.file || item?.original || null).catch(error => toast('參考圖無法顯示：' + error.message, true));
+}
+async function loadPreview(file) {
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) throw new Error('參考圖僅支援 PNG、JPG、WebP');
+  if (file.size > 25 * 1024 * 1024) throw new Error('參考圖大小上限為 25 MB');
+  const prepared = await prepareBlob(file); release(prepared);
+  Object.assign(state.preview, { mode: 'image', file, name: file.name }); renderPreview(); scheduleSave();
+}
+
 function renderLights() {
   const light = state.lights[state.selectedLight];
   $('light-tabs').replaceChildren(...state.lights.map((l, index) => { const tab = document.createElement('button'); tab.className = 'light-tab' + (index === state.selectedLight ? ' selected' : ''); tab.textContent = index + 1; tab.setAttribute('aria-label', `選擇燈光 ${index + 1}`); tab.setAttribute('aria-pressed', index === state.selectedLight); tab.onclick = () => { state.selectedLight = index; renderLights(); }; return tab; }));
@@ -87,6 +107,7 @@ function renderLayout() {
   requestDraw();
 }
 function renderAssets() {
+  renderPreview();
   const list = $('asset-list'); list.replaceChildren();
   for (const item of state.items) {
     const card = document.createElement('div'); card.className = 'asset-card ' + item.status; card.title = item.error || item.name;
@@ -168,12 +189,17 @@ async function restore(data) {
   if (data.version !== 1 || !Array.isArray(data.items) || data.items.length > 100) throw new Error('不支援的專案格式');
   if (data.layout.width < 64 || data.layout.height < 64 || data.layout.width > 8192 || data.layout.height > 8192 || data.layout.width * data.layout.height > 32e6) throw new Error('專案畫布尺寸超出範圍');
   snapshotRecipe(data.lights, data.resolution, data.folder);
+  const preview = { mode: data.preview?.mode === 'model' ? 'model' : 'image', itemId: data.preview?.itemId || null, file: data.preview?.file || null, name: data.preview?.name || '參考圖片' };
+  if (preview.file) {
+    if (preview.file.size > 25 * 1024 * 1024) throw new Error('參考圖大小上限為 25 MB');
+    release(await prepareBlob(preview.file));
+  }
   const preparedItems = [];
   try {
     for (const raw of data.items) { const item = { ...raw, status: ['processing', 'queued'].includes(raw.status) ? 'interrupted' : raw.status }; await updateImage(item); preparedItems.push(item); }
   } catch (e) { preparedItems.forEach(release); throw e; }
   state.items.forEach(release); if (state.background) release(state.background);
-  Object.assign(state, { lights: data.lights, layout: { ...DEFAULT_LAYOUT, ...data.layout }, resolution: data.resolution || '2k', concurrency: clamp(data.concurrency || 2, 1, 3), folder: data.folder || '', items: preparedItems, background: null, selectedLight: 0 });
+  Object.assign(state, { lights: data.lights, layout: { ...DEFAULT_LAYOUT, ...data.layout }, preview, resolution: data.resolution || '2k', concurrency: clamp(data.concurrency || 2, 1, 3), folder: data.folder || '', items: preparedItems, background: null, selectedLight: 0 });
   if (data.background?.file) await loadBackground(data.background.file, true);
   renderLights(); renderLayout(); renderAssets(); requestDraw();
 }
@@ -290,6 +316,7 @@ async function exportProject() {
     item.original = { path: source, type: sourceType };
   }
   if (manifest.background) { files.background = new Uint8Array(await manifest.background.file.arrayBuffer()); manifest.background.type = manifest.background.file.type; delete manifest.background.file; }
+  if (manifest.preview.file) { files.reference = new Uint8Array(await manifest.preview.file.arrayBuffer()); manifest.preview.type = manifest.preview.file.type; delete manifest.preview.file; }
   files['project.json'] = strToU8(JSON.stringify(manifest));
   download(new Blob([zipSync(files, { level: 0 })], { type: 'application/zip' }), 'untitled-studio.relight');
   toast('專案已下載，包含原圖、結果與設定。');
@@ -306,6 +333,10 @@ async function importProject(file) {
     if (item.output) { if (!files[item.output.path]) throw new Error('專案遺失產圖結果'); item.output = new Blob([files[item.output.path]], { type: item.output.type }); }
   }
   if (manifest.background) manifest.background.file = new File([files.background], manifest.background.name, { type: manifest.background.type });
+  if (manifest.preview?.type) {
+    if (!files.reference) throw new Error('專案遺失參考圖片');
+    manifest.preview.file = new File([files.reference], manifest.preview.name, { type: manifest.preview.type });
+  }
   await restore(manifest); await persist(); toast('專案已開啟');
 }
 
@@ -313,6 +344,11 @@ async function importProject(file) {
 // and upstream error messages can never become HTML.
 for (const id of ['empty-upload', 'add-images']) on(id, 'click', () => $('image-input').click());
 on('image-input', 'change', async e => { await addFiles(e.target.files); e.target.value = ''; });
+on('preview-image', 'click', () => { state.preview.mode = 'image'; renderPreview(); scheduleSave(); });
+on('preview-model', 'click', () => { state.preview.mode = 'model'; renderPreview(); scheduleSave(); });
+on('preview-upload', 'click', () => $('preview-input').click());
+on('preview-input', 'change', async e => { try { if (e.target.files[0]) await loadPreview(e.target.files[0]); } finally { e.target.value = ''; } });
+on('preview-reset', 'click', () => { state.preview.file = null; state.preview.name = ''; renderPreview(); scheduleSave(); });
 on('background-upload', 'click', () => $('background-input').click());
 on('background-input', 'change', async e => { if (e.target.files[0]) await loadBackground(e.target.files[0]); e.target.value = ''; });
 on('clear-background', 'click', () => { if (state.background) release(state.background); state.background = null; renderLayout(); scheduleSave(); });
@@ -382,7 +418,7 @@ window.addEventListener('beforeunload', event => { if (busy) { event.preventDefa
 async function boot() {
   icons();
   new ResizeObserver(requestDraw).observe($('canvas-area'));
-  try { scene = new LightScene($('light-scene'), values => { Object.assign(state.lights[state.selectedLight], values); renderLights(); scheduleSave(); }); } catch { $('light-scene').textContent = '此裝置無法啟用 WebGL，仍可使用數值控制打光。'; }
+  try { scene = new LightScene($('light-scene'), values => { Object.assign(state.lights[state.selectedLight], values); renderLights(); scheduleSave(); }, () => { $('model-status').textContent = scene?.bustStatus || ''; }); } catch { $('light-scene').textContent = '此裝置無法啟用 WebGL，仍可使用數值控制打光。'; }
   try { const saved = await loadProject(); if (saved) await restore(saved); } catch (error) { toast('無法還原上次工作區：' + error.message, true); }
   renderLights(); renderLayout(); renderAssets();
   try { await client.callback(); if (client.connected) await refreshAccount(); } catch (error) { toast('Magnific 連線：' + error.message, true); }

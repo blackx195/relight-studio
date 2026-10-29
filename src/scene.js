@@ -1,21 +1,20 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { lightPosition, clamp } from './core.js';
 
-function studioSubject(material) {
-  const group = new THREE.Group();
-  const part = (geometry, position, scale) => { const mesh = new THREE.Mesh(geometry, material); mesh.position.set(...position); if (scale) mesh.scale.set(...scale); mesh.castShadow = true; mesh.receiveShadow = true; group.add(mesh); return mesh; };
-  part(new THREE.SphereGeometry(0.6, 48, 32), [0, 0.7, 0], [0.79, 1.06, 0.87]);
-  part(new THREE.SphereGeometry(0.2, 32, 24), [0, 0.57, 0.48], [0.38, 0.72, 0.62]);
-  part(new THREE.SphereGeometry(0.3, 32, 24), [0, 0.31, 0.17], [1.12, 0.67, 1.0]);
-  part(new THREE.CylinderGeometry(0.21, 0.27, 0.55, 48), [0, -0.01, 0]);
-  part(new THREE.SphereGeometry(0.7, 48, 32), [0, -0.53, 0], [1.07, 0.5, 0.57]);
-  part(new THREE.CylinderGeometry(0.53, 0.53, 0.12, 64), [0, -0.92, 0]);
-  return group;
+function placeholderTexture() {
+  const canvas = document.createElement('canvas'); canvas.width = canvas.height = 512;
+  const ctx = canvas.getContext('2d'); ctx.fillStyle = '#292d31'; ctx.fillRect(0, 0, 512, 512);
+  ctx.strokeStyle = '#747c83'; ctx.lineWidth = 6; ctx.lineJoin = 'round';
+  ctx.strokeRect(192, 188, 128, 106); ctx.beginPath(); ctx.arc(226, 218, 10, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(196, 281); ctx.lineTo(238, 245); ctx.lineTo(265, 266); ctx.lineTo(291, 235); ctx.lineTo(316, 257); ctx.stroke();
+  ctx.fillStyle = '#9ba2a8'; ctx.textAlign = 'center'; ctx.font = '22px sans-serif'; ctx.fillText('上傳圖片預覽', 256, 344);
+  const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace; return texture;
 }
 
 export class LightScene {
-  constructor(container, onChange) {
-    this.container = container; this.onChange = onChange;
+  constructor(container, onChange, onStatus = () => {}) {
+    this.container = container; this.onChange = onChange; this.onStatus = onStatus; this.mode = 'image';
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     this.renderer.setClearColor(0x15181b, 0);
@@ -24,9 +23,15 @@ export class LightScene {
     container.append(this.renderer.domElement);
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(39, 1, 0.1, 100);
-    this.camera.position.set(3.8, 2.7, 5.7); this.camera.lookAt(0, 0, 0);
+    this.camera.position.set(2.6, 1.8, 5.5); this.camera.lookAt(0, 0.15, 0);
     this.scene.add(new THREE.AmbientLight(0xffffff, 0.18));
-    this.scene.add(studioSubject(new THREE.MeshStandardMaterial({ color: 0xc8cbc6, roughness: 0.36, metalness: 0.12 })));
+    this.bust = new THREE.Group(); this.bust.visible = false; this.scene.add(this.bust);
+    this.placeholder = placeholderTexture();
+    this.imagePlane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: this.placeholder, side: THREE.DoubleSide, toneMapped: false }));
+    this.imagePlane.scale.set(2.05, 2.05, 1); this.scene.add(this.imagePlane);
+    this.imageFrame = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 0.04), new THREE.MeshStandardMaterial({ color: 0x181b1e, roughness: 1 }));
+    this.imageFrame.position.z = -0.025; this.imageFrame.scale.set(2.11, 2.11, 1); this.scene.add(this.imageFrame);
+    this.loadBust();
     const grid = new THREE.GridHelper(8, 16, 0x4a5048, 0x2b302e); grid.position.y = -1.02; this.scene.add(grid);
     const ring = new THREE.Mesh(new THREE.TorusGeometry(2.55, 0.008, 8, 100), new THREE.MeshBasicMaterial({ color: 0x636b58 }));
     ring.rotation.x = Math.PI / 2; ring.position.y = -0.95; this.scene.add(ring);
@@ -42,6 +47,37 @@ export class LightScene {
     });
     canvas.addEventListener('pointerup', () => { this.drag = null; });
     canvas.addEventListener('pointercancel', () => { this.drag = null; });
+  }
+  async loadBust() {
+    this.bustStatus = '石膏像載入中…'; this.onStatus();
+    try {
+      const { scene: model } = await new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/plaster-bust.glb`);
+      const box = new THREE.Box3().setFromObject(model), center = box.getCenter(new THREE.Vector3());
+      const scale = 2.4 / box.getSize(new THREE.Vector3()).y;
+      model.scale.setScalar(scale); model.position.set(-center.x * scale, -1.02 - box.min.y * scale, -center.z * scale);
+      this.bust.add(model); this.bustStatus = ''; this.render();
+    } catch { this.bustStatus = '石膏像載入失敗，請重新整理頁面'; }
+    this.onStatus();
+  }
+  setMode(mode) {
+    this.mode = mode; this.bust.visible = mode === 'model'; this.imagePlane.visible = this.imageFrame.visible = mode === 'image'; this.render();
+  }
+  async setImage(blob) {
+    if (this.imageBlob === blob) return;
+    this.imageBlob = blob; const revision = this.imageRevision = (this.imageRevision || 0) + 1;
+    this.imageTexture?.dispose(); this.imageTexture = null; this.imagePlane.material.map = this.placeholder;
+    this.imagePlane.scale.set(2.05, 2.05, 1); this.imageFrame.scale.set(2.11, 2.11, 1); this.render();
+    if (!blob) return;
+    const bitmap = await createImageBitmap(blob);
+    if (revision !== this.imageRevision) { bitmap.close(); return; }
+    // Own a small copy: preview stays valid when an item is regenerated or removed.
+    const canvas = document.createElement('canvas'), factor = Math.min(1, 1024 / Math.max(bitmap.width, bitmap.height));
+    canvas.width = Math.max(1, Math.round(bitmap.width * factor)); canvas.height = Math.max(1, Math.round(bitmap.height * factor));
+    const ctx = canvas.getContext('2d'); ctx.fillStyle = '#292d31'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height); bitmap.close();
+    this.imageTexture = new THREE.CanvasTexture(canvas); this.imageTexture.colorSpace = THREE.SRGBColorSpace;
+    this.imagePlane.material.map = this.imageTexture; this.imagePlane.material.needsUpdate = true;
+    const fit = 2.15 / Math.max(canvas.width, canvas.height), w = canvas.width * fit, h = canvas.height * fit;
+    this.imagePlane.scale.set(w, h, 1); this.imageFrame.scale.set(w + 0.06, h + 0.06, 1); this.render();
   }
   resize() { const { width, height } = this.container.getBoundingClientRect(); this.renderer.setSize(width, height); this.camera.aspect = width / height; this.camera.updateProjectionMatrix(); this.render(); }
   update(lights, selected) {

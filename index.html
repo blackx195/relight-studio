@@ -11,7 +11,10 @@
     <aside class="lighting-panel panel">
       <div class="panel-title"><span class="step">01</span><h1>打光工作室</h1><i data-lucide="sun"></i></div>
       <p class="panel-intro">設定一次，套用到每一張圖片。</p>
+      <div class="preview-controls"><div class="preview-modes" role="group" aria-label="打光參考模式"><button id="preview-image" aria-pressed="true"><i data-lucide="image-plus"></i>圖片</button><button id="preview-model" aria-pressed="false">石膏像</button></div><button id="preview-upload" class="text-btn"><i data-lucide="upload"></i>帶入圖片</button></div>
       <div class="scene-wrap"><div id="light-scene"></div><span class="scene-label"><span class="status-dot"></span>3D LIGHT PREVIEW</span><span class="scene-hint"><i data-lucide="move"></i> 拖曳調整燈光</span><div class="axis-legend"><b>X</b><b>Y</b><b>Z</b></div></div>
+      <div class="preview-caption" id="preview-source"><span id="preview-name">上傳素材後，預設顯示第一張圖片</span><button id="preview-reset" class="text-btn" hidden>使用首張素材</button></div>
+      <div class="preview-caption" id="model-credit" hidden><a href="https://polyhaven.com/a/marble_bust_01" target="_blank" rel="noopener">Poly Haven · CC0</a><span id="model-status" role="status"></span></div>
       <div class="light-bar"><div id="light-tabs"></div><button id="add-light" class="icon-btn" aria-label="新增燈光" title="最多 4 盞燈"><i data-lucide="plus"></i></button><button id="remove-light" class="icon-btn" aria-label="移除選取燈光"><i data-lucide="minus"></i></button></div>
       <div class="subheading">QUICK SELECT <span>快捷方向</span></div>
       <div class="presets"><button data-preset="front"><i data-lucide="circle-dot"></i>前</button><button data-preset="back"><i data-lucide="circle-dashed"></i>後</button><button data-preset="left"><i data-lucide="arrow-left"></i>左</button><button data-preset="right"><i data-lucide="arrow-right"></i>右</button><button data-preset="top"><i data-lucide="arrow-up"></i>上</button><button data-preset="bottom"><i data-lucide="arrow-down"></i>下</button></div>
@@ -37,7 +40,7 @@
       <div class="section-label">畫布尺寸 <span>CANVAS</span></div>
       <div class="two-fields"><label>寬度 <span>px</span><input id="width" type="number" min="64" max="8192" value="1920"></label><span class="times">×</span><label>高度 <span>px</span><input id="height" type="number" min="64" max="8192" value="1080"></label></div>
       <div class="ratio-pills"><button data-ratio="16:9" class="active">16:9</button><button data-ratio="1:1">1:1</button><button data-ratio="4:5">4:5</button><button data-ratio="9:16">9:16</button></div>
-      <div id="background-card" class="background-card"><div id="bg-swatch"></div><div><strong id="bg-name">純色底圖</strong><span id="bg-description">可上傳圖片，自動符合比例</span></div><button id="clear-background" class="icon-btn" aria-label="移除底圖" title="移除底圖" hidden><i data-lucide="x"></i></button><input id="bg-color" type="color" value="#d8d6cf" aria-label="底圖顏色"></div>
+      <div id="background-card" class="background-card"><div id="bg-swatch"></div><div><strong id="bg-name">純色底圖</strong><span id="bg-description">可上傳圖片，自動符合比例</span></div><button id="clear-background" class="icon-btn" aria-label="移除底圖" title="移除底圖" hidden><i data-lucide="x"></i></button><input id="bg-color" type="color" value="#333333" aria-label="底圖顏色"></div>
       <button id="background-upload" class="secondary background-upload-button"><i data-lucide="image-plus"></i>上傳底圖</button>
       <label class="toggle-row"><span>透明背景</span><input id="transparent" type="checkbox" role="switch"><span class="toggle"></span></label>
       <hr><div class="section-label">排列方式 <span>LAYOUT</span></div>
@@ -57,7 +60,7 @@
     </aside>
   </main>
   <footer class="bottom-bar"><div><span class="status-dot"></span><span id="bottom-status">工作區已準備就緒</span></div><div><button id="save-project" class="text-btn"><i data-lucide="save"></i>儲存專案</button><button id="open-project" class="text-btn"><i data-lucide="folder-open"></i>開啟專案</button><span class="divider">|</span><button id="export-assets" class="text-btn"><i data-lucide="archive"></i>下載單圖 ZIP</button><button id="export-png" class="secondary"><i data-lucide="download"></i>匯出合成 PNG</button></div></footer>
-  <input type="file" id="image-input" accept="image/png,image/jpeg,image/webp" multiple hidden><input type="file" id="background-input" accept="image/png,image/jpeg,image/webp" hidden><input type="file" id="project-input" accept=".relight,.zip" hidden>
+  <input type="file" id="image-input" accept="image/png,image/jpeg,image/webp" multiple hidden><input type="file" id="preview-input" accept="image/png,image/jpeg,image/webp" hidden><input type="file" id="background-input" accept="image/png,image/jpeg,image/webp" hidden><input type="file" id="project-input" accept=".relight,.zip" hidden>
   <div id="toast" role="status" hidden></div>
   <dialog id="help-dialog"><button class="dialog-close icon-btn" aria-label="關閉說明"><i data-lucide="x"></i></button><span class="eyebrow">RELIGHT STUDIO</span><h2>從一盞光，到一整個系列。</h2><ol><li><strong>連接 Magnific。</strong>透過官方 OAuth 登入，授權僅供此分頁使用；無須 API Key。</li><li><strong>加入原圖。</strong>每批最多 100 張，原始檔會在產圖時上傳 Magnific。</li><li><strong>設定 1–4 盞燈。</strong>拖曳 3D 預覽或輸入角度；整批固定使用按下開始時的數值。</li><li><strong>批量產圖與去背。</strong>每張先 Relight，再去背；失敗的項目可繼續，其他圖片仍會完成。</li><li><strong>排版與下載。</strong>底圖決定畫布比例；圖片超過格數時自動增加列數。隨機排列只改順序。</li></ol><p>圖片上的 ↻ 使用該圖上次的打光設定，從原圖重產並重新去背。排版中的示範素材沒有經過 AI 打光。</p><p>工作區自動保存在此瀏覽器。換裝置前請下載「專案」，其中包含原圖、結果與設定，但不包含登入憑證。瀏覽器儲存仍可能被清除。</p><p><a href="https://www.magnific.com/ai/docs/relight" target="_blank" rel="noopener">Magnific Relight 說明 ↗</a> · <a href="https://docs.magnific.com/modelcontextprotocol" target="_blank" rel="noopener">官方 MCP 文件 ↗</a></p></dialog>
   <script type="module" src="./src/app.js"></script>
