@@ -20,7 +20,7 @@
 
 本機的 15 項自動測試與正式建置通過。示範素材為本機 Three.js 渲染，**不是 Magnific 產圖**。
 
-**Magnific OAuth 尚未完成實際連通與付費產圖驗證。** 網站以「Magnific 待設定」明確顯示。首次瀏覽器 OAuth 嘗試在 callback 後收到 HTTP 403；之後為正式網站註冊公開 OAuth 用戶端的動作被自動核准審查拒絕，尚待網站擁有者明確授權。未將任何 API Key、client secret 或帳號 token 放入程式碼。
+**Magnific OAuth 尚未完成實際連通與付費產圖驗證。** 網站以「Magnific 待設定」明確顯示。首次瀏覽器 OAuth 嘗試在 callback 後收到 HTTP 403，正式網站的公開 OAuth 用戶端尚待擁有者授權設定。未將任何 API Key、client secret 或帳號 token 放入程式碼。
 
 待擁有者授權後，註冊 `token_endpoint_auth_method: none` 的公開 OAuth 用戶端，限定本網站的回呼網址，把回傳的**公開 client_id** 填入 `public/oauth-config.json`，並確認 token endpoint 的 CORS 允許網站 origin。不能把 confidential client 的 secret 放到此靜態網站。登入採 authorization code + PKCE S256，並檢查 state、issuer、有效期限。
 

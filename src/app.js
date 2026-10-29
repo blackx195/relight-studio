@@ -309,6 +309,23 @@ const presets = { front: [0, 0], back: [180, 0], left: [270, 0], right: [90, 0],
 document.querySelectorAll('[data-preset]').forEach(b => b.onclick = () => { const [azimuth, elevation] = presets[b.dataset.preset]; Object.assign(state.lights[state.selectedLight], { azimuth, elevation }); renderLights(); scheduleSave(); });
 document.querySelectorAll('[data-color]').forEach(b => b.onclick = () => { Object.assign(state.lights[state.selectedLight], { color: b.dataset.color, type: b.dataset.color === '#ffffff' ? 'neutral' : 'gel' }); renderLights(); scheduleSave(); });
 on('light-color', 'input', e => { Object.assign(state.lights[state.selectedLight], { color: e.target.value, type: 'gel' }); renderLights(); scheduleSave(); });
+// Keep numeric edits in the project immediately, even before focus leaves the
+// field. Do not rewrite the active text field while the user is typing.
+for (const key of Object.keys(DEFAULT_LAYOUT).filter(key => typeof DEFAULT_LAYOUT[key] === 'number' && $(key).type === 'number')) on(key, 'input', e => {
+  const input = e.target, value = Number(input.value);
+  if (!input.value || !Number.isFinite(value) || value < Number(input.min) || value > Number(input.max)) return;
+  const next = { ...state.layout, [key]: Math.round(value) };
+  if (state.background && ['width', 'height'].includes(key)) {
+    const aspect = state.background.bitmap.width / state.background.bitmap.height;
+    if (key === 'width') next.height = Math.round(value / aspect); else next.width = Math.round(value * aspect);
+  }
+  if (next.width > 8192 || next.height > 8192 || next.width * next.height > 32e6) return;
+  state.layout = next;
+  if (state.background && key === 'width') $('height').value = next.height;
+  if (state.background && key === 'height') $('width').value = next.width;
+  $('canvas-size').textContent = `${next.width} × ${next.height}`;
+  requestDraw(); scheduleSave();
+});
 for (const key of Object.keys(DEFAULT_LAYOUT).filter(key => typeof DEFAULT_LAYOUT[key] === 'number')) on(key, $(key).type === 'range' ? 'input' : 'change', e => {
   const value = clamp(e.target.value, Number(e.target.min), Number(e.target.max)); state.layout[key] = Math.round(value);
   if (state.background && ['width', 'height'].includes(key)) { const aspect = state.background.bitmap.width / state.background.bitmap.height; if (key === 'width') state.layout.height = Math.round(value / aspect); else state.layout.width = Math.round(value * aspect); }
