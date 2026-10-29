@@ -3,7 +3,7 @@ export const DEFAULT_LIGHTS = [{ id: 'key', azimuth: 45, elevation: 35, intensit
 export const DEFAULT_LAYOUT = { width: 1920, height: 1080, rows: 2, columns: 3, gapX: 40, gapY: 40, padding: 64, offsetX: 0, offsetY: 0, scale: 90, backgroundColor: '#d8d6cf', transparent: false };
 export function normalizedLights(lights) {
   if (!Array.isArray(lights) || lights.length < 1 || lights.length > 4) throw new Error('請設定 1–4 盞燈。');
-  return lights.map(l => ({ azimuth: ((clamp(l.azimuth, 0, 360) + 180) % 360) - 180, elevation: clamp(l.elevation, -90, 90), intensity: clamp(l.intensity, 1, 10), type: l.type === 'neutral' ? 'neutral' : 'gel', ...(l.type === 'neutral' ? {} : { color: /^#[0-9a-f]{6}$/i.test(l.color) ? l.color : '#ffffff' }) }));
+  return lights.map(l => ({ azimuth: ((Math.round(clamp(l.azimuth, -180, 360)) + 180) % 360) - 180, elevation: Math.round(clamp(l.elevation, -90, 90)), intensity: Math.round(clamp(l.intensity, 1, 10)), type: l.type === 'neutral' ? 'neutral' : 'gel', ...(l.type === 'neutral' ? {} : { color: /^#[0-9a-f]{6}$/i.test(l.color) ? l.color : '#ffffff' }) }));
 }
 export function lightPosition(light, radius = 3.2) {
   const az = light.azimuth * Math.PI / 180, el = light.elevation * Math.PI / 180;

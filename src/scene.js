@@ -38,7 +38,7 @@ export class LightScene {
     canvas.addEventListener('pointerdown', e => { if (!this.current) return; this.drag = { x: e.clientX, y: e.clientY, ...this.current }; canvas.setPointerCapture(e.pointerId); });
     canvas.addEventListener('pointermove', e => {
       if (!this.drag) return;
-      this.onChange({ azimuth: (this.drag.azimuth + (e.clientX - this.drag.x) * 0.7 + 720) % 360, elevation: clamp(this.drag.elevation - (e.clientY - this.drag.y) * 0.5, -90, 90) });
+      this.onChange({ azimuth: Math.round((this.drag.azimuth + (e.clientX - this.drag.x) * 0.7 + 720) % 360), elevation: Math.round(clamp(this.drag.elevation - (e.clientY - this.drag.y) * 0.5, -90, 90)) });
     });
     canvas.addEventListener('pointerup', () => { this.drag = null; });
     canvas.addEventListener('pointercancel', () => { this.drag = null; });

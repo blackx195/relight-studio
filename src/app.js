@@ -64,7 +64,7 @@ async function addFiles(files, demo = false) {
 function renderLights() {
   const light = state.lights[state.selectedLight];
   $('light-tabs').replaceChildren(...state.lights.map((l, index) => { const tab = document.createElement('button'); tab.className = 'light-tab' + (index === state.selectedLight ? ' selected' : ''); tab.textContent = index + 1; tab.setAttribute('aria-label', `選擇燈光 ${index + 1}`); tab.setAttribute('aria-pressed', index === state.selectedLight); tab.onclick = () => { state.selectedLight = index; renderLights(); }; return tab; }));
-  for (const key of ['azimuth', 'elevation', 'intensity']) { $(key).value = light[key]; $(key + '-number').value = Math.round(light[key] * 10) / 10; }
+  for (const key of ['azimuth', 'elevation', 'intensity']) { $(key).value = Math.round(light[key]); $(key + '-number').value = Math.round(light[key]); }
   $('light-color').value = light.color;
   $('add-light').disabled = state.lights.length >= 4; $('remove-light').disabled = state.lights.length <= 1;
   scene?.update(state.lights, state.selectedLight);
@@ -304,7 +304,7 @@ on('help', 'click', () => $('help-dialog').showModal());
 document.querySelector('.dialog-close').onclick = () => $('help-dialog').close();
 on('add-light', 'click', () => { if (state.lights.length >= 4) return; state.lights.push({ id: crypto.randomUUID(), azimuth: 270, elevation: 20, intensity: 3, color: '#a3c7ff', type: 'gel' }); state.selectedLight = state.lights.length - 1; renderLights(); scheduleSave(); });
 on('remove-light', 'click', () => { if (state.lights.length <= 1) return; state.lights.splice(state.selectedLight, 1); state.selectedLight = Math.min(state.selectedLight, state.lights.length - 1); renderLights(); scheduleSave(); });
-for (const key of ['azimuth', 'elevation', 'intensity']) for (const suffix of ['', '-number']) on(key + suffix, 'input', e => { const el = e.target; state.lights[state.selectedLight][key] = clamp(el.value, Number(el.min), Number(el.max)); renderLights(); scheduleSave(); });
+for (const key of ['azimuth', 'elevation', 'intensity']) for (const suffix of ['', '-number']) on(key + suffix, 'input', e => { const el = e.target; state.lights[state.selectedLight][key] = Math.round(clamp(el.value, Number(el.min), Number(el.max))); renderLights(); scheduleSave(); });
 const presets = { front: [0, 0], back: [180, 0], left: [270, 0], right: [90, 0], top: [0, 90], bottom: [0, -90] };
 document.querySelectorAll('[data-preset]').forEach(b => b.onclick = () => { const [azimuth, elevation] = presets[b.dataset.preset]; Object.assign(state.lights[state.selectedLight], { azimuth, elevation }); renderLights(); scheduleSave(); });
 document.querySelectorAll('[data-color]').forEach(b => b.onclick = () => { Object.assign(state.lights[state.selectedLight], { color: b.dataset.color, type: b.dataset.color === '#ffffff' ? 'neutral' : 'gel' }); renderLights(); scheduleSave(); });

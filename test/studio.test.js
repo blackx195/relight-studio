@@ -11,16 +11,21 @@ test('extreme spacing is clamped without negative dimensions', () => { const g =
 test('X/Y position offset is applied in canvas pixels', () => { const a = gridLayout(items, DEFAULT_LAYOUT).slots[0], b = gridLayout(items, { ...DEFAULT_LAYOUT, offsetX: -30, offsetY: 80 }).slots[0]; assert.ok(Math.abs(b.x - a.x + 30) < 1e-8); assert.ok(Math.abs(b.y - a.y - 80) < 1e-8); });
 test('axis convention: front +Z, right +X, top +Y', () => { assert.deepEqual(lightPosition({ azimuth: 0, elevation: 0 }, 1), [0, 0, 1]); assert.ok(Math.abs(lightPosition({ azimuth: 90, elevation: 0 }, 1)[0] - 1) < 1e-8); assert.ok(Math.abs(lightPosition({ azimuth: 0, elevation: 90 }, 1)[1] - 1) < 1e-8); });
 test('UI 270° maps to API -90° and neutral light omits gel color', () => { const lights = normalizedLights([{ azimuth: 270, elevation: -90, intensity: 10, type: 'neutral', color: '#ffffff' }]); assert.deepEqual(lights[0], { azimuth: -90, elevation: -90, intensity: 10, type: 'neutral' }); });
+test('dragged fractional angles become API integers, including saved negative angles', () => {
+  const lights=normalizedLights([{azimuth:344.4,elevation:32.5,intensity:5,type:'neutral'}]);
+  assert.deepEqual(lights,[{azimuth:-16,elevation:33,intensity:5,type:'neutral'}]);
+  assert.deepEqual(normalizedLights(lights),lights);
+});
 test('batch recipe does not change when controls change', () => { const lights = [{ azimuth: 45, elevation: 30, intensity: 5, type: 'gel', color: '#ffaa55' }]; const recipe = snapshotRecipe(lights, '2k', 'project'); lights[0].intensity = 9; assert.equal(recipe.lights[0].intensity, 5); assert.equal(recipe.folderReference, 'project'); });
 test('shuffle is a permutation without mutating input', () => { const result = shuffle(items, () => 0); assert.notDeepEqual(result, items); assert.equal(items[0].id, 0); assert.deepEqual(result.map(x => x.id).sort(), items.map(x => x.id).sort()); });
 test('structured and text MCP results and errors are handled', () => { assert.deepEqual(unwrapMcp({ structuredContent: { ok: 1 } }), { ok: 1 }); assert.deepEqual(unwrapMcp({ content: [{ type: 'text', text: '{"ok":2}' }] }), { ok: 2 }); assert.throws(() => unwrapMcp({ isError: true, content: [{ type: 'text', text: 'out of credits' }] }), /out of credits/); assert.equal(creationId({ creations: [{ identifier: 'abc' }] }), 'abc'); });
 test('SSE parser picks the matching response and accepts CRLF', () => { const stream = 'event: message\r\ndata: {"jsonrpc":"2.0","method":"ping"}\r\n\r\nevent: message\r\ndata: {"jsonrpc":"2.0","id":42,"result":{"ok":true}}\r\n\r\n'; assert.equal(parseRpcText(stream, 42).result.ok, true); });
 test('pipeline uploads original then relights then removes background, with fixed recipe', async () => {
   const calls = [], checkpoints = [], item = { original: new Blob(['original']), recipe: null };
-  const recipe = { lights: [{ azimuth: 20, elevation: 30, intensity: 5, type: 'neutral' }], resolution: '2k', folderReference: 'folder' };
+  const recipe = { lights: [{ azimuth: -15.6, elevation: 32.5, intensity: 5, type: 'neutral' }], resolution: '2k', folderReference: 'folder' };
   const client = { upload: async (file, folder) => { assert.equal(file, item.original); assert.equal(folder, 'folder'); return 'source'; }, call: async (tool, args) => { calls.push([tool, args]); return { creation: { identifier: tool === 'images_relight' ? 'relit' : 'cutout' } }; }, waitFor: async id => 'https://example.com/' + id, download: async () => new Blob(['result'], { type: 'image/png' }) };
   await processItem(item, recipe, client, async () => checkpoints.push({ relight: item.relightId, cutout: item.cutoutId, uncertain: item.uncertain }), () => {});
-  assert.equal(calls[0][1].creationIdentifier, 'source'); assert.equal(calls[1][1].creationIdentifier, 'relit'); assert.equal(calls[1][1].folderReference, 'folder'); assert.ok(checkpoints.some(c => c.relight === 'relit' && !c.uncertain)); assert.equal(item.output.type, 'image/png');
+  assert.equal(calls[0][1].creationIdentifier, 'source'); assert.equal(calls[0][1].lights[0].azimuth,-16); assert.equal(calls[0][1].lights[0].elevation,33); assert.equal(calls[1][1].creationIdentifier, 'relit'); assert.equal(calls[1][1].folderReference, 'folder'); assert.ok(checkpoints.some(c => c.relight === 'relit' && !c.uncertain)); assert.equal(item.output.type, 'image/png');
 });
 test('resume reuses task IDs and does not repeat paid operations', async () => {
   let submitted = 0; const item = { sourceId: 'source', relightId: 'relit', cutoutId: 'cutout', recipe: { lights: [] } };
@@ -28,7 +33,7 @@ test('resume reuses task IDs and does not repeat paid operations', async () => {
   assert.equal(submitted, 0);
 });
 test('ambiguous paid submission is checkpointed rather than silently retried', async () => {
-  const item = { sourceId: 'source', recipe: { lights: [] } }; let submissions = 0;
+  const item = { sourceId: 'source', recipe: { lights: [{azimuth:0,elevation:0,intensity:5,type:'neutral'}] } }; let submissions = 0;
   await assert.rejects(() => processItem(item, {}, { call: async () => { submissions++; throw new Error('network'); } }, async () => {}, () => {}), /network/);
   assert.equal(submissions, 1); assert.equal(item.uncertain, 'relight');
 });

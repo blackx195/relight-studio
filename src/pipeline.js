@@ -1,4 +1,4 @@
-import { creationId } from './core.js';
+import { creationId, normalizedLights } from './core.js';
 
 // Checkpoint every paid task ID before waiting: an interrupted tab resumes the
 // existing task instead of submitting another credit-consuming generation.
@@ -14,7 +14,7 @@ export async function processItem(item, recipe, client, checkpoint, progress) {
     progress('建立打光工作');
     item.uncertain = 'relight';
     await checkpoint();
-    const result = await client.call('images_relight', { creationIdentifier: item.sourceId, ...item.recipe, numImages: 1 });
+    const result = await client.call('images_relight', { creationIdentifier: item.sourceId, ...item.recipe, lights: normalizedLights(item.recipe.lights), numImages: 1 });
     item.relightId = creationId(result);
     item.uncertain = null;
     await checkpoint();
