@@ -68,7 +68,7 @@ npm run dev
 
 石膏像採用 Rico Cilliers 製作、Poly Haven 發布的 [Marble Bust 01](https://polyhaven.com/a/marble_bust_01)，授權為 [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)。保留原模型幾何，去除大理石貼圖，換成霧面石膏材質並包裝為 GLB（約 418 KB）。來源與授權記錄位於 `public/models/LICENSE.txt`。
 
-圖片模式保留原圖色彩及比例，只供 3D 光向定位參考，不會即時產生 AI 重打光結果。
+圖片模式以會受光的平面呈現原圖，保留圖片比例，即時反映燈光方向、顏色、強度與多燈疊加。近距離點光源會讓圖片各處出現不同明暗，背光時正面變暗。這是本機平面光影模擬，不會推算圖片中物件的立體結構，也不會自動送出 AI 產圖或消耗額度。
 
 ## 官方參考
 

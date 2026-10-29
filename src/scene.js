@@ -27,7 +27,7 @@ export class LightScene {
     this.scene.add(new THREE.AmbientLight(0xffffff, 0.18));
     this.bust = new THREE.Group(); this.bust.visible = false; this.scene.add(this.bust);
     this.placeholder = placeholderTexture();
-    this.imagePlane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: this.placeholder, side: THREE.DoubleSide, toneMapped: false }));
+    this.imagePlane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshStandardMaterial({ map: this.placeholder, side: THREE.DoubleSide, roughness: 0.95, metalness: 0 }));
     this.imagePlane.scale.set(2.05, 2.05, 1); this.scene.add(this.imagePlane);
     this.imageFrame = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 0.04), new THREE.MeshStandardMaterial({ color: 0x181b1e, roughness: 1 }));
     this.imageFrame.position.z = -0.025; this.imageFrame.scale.set(2.11, 2.11, 1); this.scene.add(this.imageFrame);
@@ -60,7 +60,9 @@ export class LightScene {
     this.onStatus();
   }
   setMode(mode) {
-    this.mode = mode; this.bust.visible = mode === 'model'; this.imagePlane.visible = this.imageFrame.visible = mode === 'image'; this.render();
+    const changed = this.mode !== mode;
+    this.mode = mode; this.bust.visible = mode === 'model'; this.imagePlane.visible = this.imageFrame.visible = mode === 'image';
+    if (changed && this.lights) this.update(this.lights, this.selected); else this.render();
   }
   async setImage(blob) {
     if (this.imageBlob === blob) return;
@@ -82,11 +84,17 @@ export class LightScene {
   resize() { const { width, height } = this.container.getBoundingClientRect(); this.renderer.setSize(width, height); this.camera.aspect = width / height; this.camera.updateProjectionMatrix(); this.render(); }
   update(lights, selected) {
     for (const child of [...this.rig.children]) { this.rig.remove(child); child.geometry?.dispose(); child.material?.dispose(); }
+    this.lights = lights; this.selected = selected;
     this.current = lights[selected];
     lights.forEach((l, i) => {
       const color = l.type === 'neutral' ? '#ffffff' : l.color;
       const pos = new THREE.Vector3(...lightPosition(l, 2.6));
-      const light = new THREE.DirectionalLight(color, l.intensity * 0.7); light.position.copy(pos); this.rig.add(light);
+      // A nearby light produces a visible falloff across the image board.
+      // The bust keeps its directional lighting; neither preview submits AI jobs.
+      const light = this.mode === 'image'
+        ? new THREE.PointLight(color, l.intensity * 4.7, 0, 2)
+        : new THREE.DirectionalLight(color, l.intensity * 0.7);
+      light.position.copy(pos); this.rig.add(light);
       const sphere = new THREE.Mesh(new THREE.SphereGeometry(i === selected ? 0.13 : 0.09, 24, 16), new THREE.MeshBasicMaterial({ color })); sphere.position.copy(pos); this.rig.add(sphere);
       const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0.4, 0), pos]), new THREE.LineDashedMaterial({ color, transparent: true, opacity: 0.4, dashSize: 0.1, gapSize: 0.08 })); line.computeLineDistances(); this.rig.add(line);
       if (i === selected) {
